@@ -5,16 +5,16 @@ import {
   TripInput,
   TripPlan,
 } from "./types";
+import { decodePolyline } from "./googlePolyline";
 
-const MAPBOX_BASE = "https://api.mapbox.com";
+const GOOGLE_MAPS_BASE = "https://maps.googleapis.com/maps/api";
 const OCM_BASE = "https://api.openchargemap.io/v3";
-const MIN_SOC = 0.10; // never go below 10%
-const CHARGE_TO_SOC = 0.80; // charge to 80% by default (optimal for DCFC)
+const MIN_SOC = 0.10;
+const CHARGE_TO_SOC = 0.80;
 const MILES_TO_METERS = 1609.34;
-const DETOUR_PENALTY_PER_MILE = 0.15; // $ per mile of detour (time + fuel equivalent)
-const CORRIDOR_MILES = 10; // search within 10 miles of route
+const DETOUR_PENALTY_PER_MILE = 0.15;
+const CORRIDOR_MILES = 10;
 
-// Haversine distance between two coords in miles
 function haversine(a: Coordinates, b: Coordinates): number {
   const R = 3958.8;
   const dLat = ((b.lat - a.lat) * Math.PI) / 180;
@@ -30,27 +30,17 @@ function haversine(a: Coordinates, b: Coordinates): number {
   return R * 2 * Math.asin(Math.sqrt(h));
 }
 
-// Minimum distance from a point to a line segment (route segment)
-function pointToSegmentDistance(
-  p: Coordinates,
-  a: Coordinates,
-  b: Coordinates
-): number {
+function pointToSegmentDistance(p: Coordinates, a: Coordinates, b: Coordinates): number {
   const dx = b.lng - a.lng;
   const dy = b.lat - a.lat;
   const lenSq = dx * dx + dy * dy;
   if (lenSq === 0) return haversine(p, a);
   let t = ((p.lng - a.lng) * dx + (p.lat - a.lat) * dy) / lenSq;
   t = Math.max(0, Math.min(1, t));
-  const nearest = { lat: a.lat + t * dy, lng: a.lng + t * dx };
-  return haversine(p, nearest);
+  return haversine(p, { lat: a.lat + t * dy, lng: a.lng + t * dx });
 }
 
-// Find minimum distance from point to entire route polyline
-function minDistanceToRoute(
-  point: Coordinates,
-  routeCoords: Coordinates[]
-): number {
+function minDistanceToRoute(point: Coordinates, routeCoords: Coordinates[]): number {
   let minDist = Infinity;
   for (let i = 0; i < routeCoords.length - 1; i++) {
     const d = pointToSegmentDistance(point, routeCoords[i], routeCoords[i + 1]);
@@ -59,50 +49,21 @@ function minDistanceToRoute(
   return minDist;
 }
 
-// Get bounding box that covers the entire route + corridor
-function getRouteBBox(
-  routeCoords: Coordinates[],
-  bufferMiles: number
-): { minLat: number; maxLat: number; minLng: number; maxLng: number } {
-  const bufferDeg = bufferMiles / 69;
-  const lats = routeCoords.map((c) => c.lat);
-  const lngs = routeCoords.map((c) => c.lng);
-  return {
-    minLat: Math.min(...lats) - bufferDeg,
-    maxLat: Math.max(...lats) + bufferDeg,
-    minLng: Math.min(...lngs) - bufferDeg,
-    maxLng: Math.max(...lngs) + bufferDeg,
-  };
-}
-
-// Progress along route (0–1) for a given point (nearest route fraction)
-function routeProgress(
-  point: Coordinates,
-  routeCoords: Coordinates[]
-): number {
-  let bestT = 0;
-  let minDist = Infinity;
-  let totalLen = 0;
+function routeProgress(point: Coordinates, routeCoords: Coordinates[]): number {
+  let bestT = 0, minDist = Infinity, totalLen = 0, cumLen = 0;
   const segLens: number[] = [];
   for (let i = 0; i < routeCoords.length - 1; i++) {
     const l = haversine(routeCoords[i], routeCoords[i + 1]);
     segLens.push(l);
     totalLen += l;
   }
-  let cumLen = 0;
   for (let i = 0; i < routeCoords.length - 1; i++) {
-    const a = routeCoords[i];
-    const b = routeCoords[i + 1];
-    const dx = b.lng - a.lng;
-    const dy = b.lat - a.lat;
+    const a = routeCoords[i], b = routeCoords[i + 1];
+    const dx = b.lng - a.lng, dy = b.lat - a.lat;
     const lenSq = dx * dx + dy * dy;
-    let t =
-      lenSq === 0
-        ? 0
-        : ((point.lng - a.lng) * dx + (point.lat - a.lat) * dy) / lenSq;
+    let t = lenSq === 0 ? 0 : ((point.lng - a.lng) * dx + (point.lat - a.lat) * dy) / lenSq;
     t = Math.max(0, Math.min(1, t));
-    const nearest = { lat: a.lat + t * dy, lng: a.lng + t * dx };
-    const d = haversine(point, nearest);
+    const d = haversine(point, { lat: a.lat + t * dy, lng: a.lng + t * dx });
     if (d < minDist) {
       minDist = d;
       bestT = (cumLen + t * segLens[i]) / totalLen;
@@ -112,39 +73,78 @@ function routeProgress(
   return bestT;
 }
 
+// Parse OCM's free-text UsageCost field to get $/kWh
+function parseOCMPrice(usageCost: string | null | undefined): number | null {
+  if (!usageCost) return null;
+  const s = usageCost.toLowerCase().trim();
+  if (s === "free" || s === "$0" || s === "0") return 0;
+  // Match "$0.43/kWh", "0.43 per kwh", "$0.43 per kw·h", etc.
+  const kwhMatch = s.match(/\$?(\d+\.?\d*)\s*(?:per\s*kw[h·]?|\/kw[h·]?)/);
+  if (kwhMatch) {
+    const v = parseFloat(kwhMatch[1]);
+    if (v >= 0 && v < 5) return v;
+  }
+  // Fallback: first dollar-like decimal in a reasonable range
+  const numMatch = s.match(/\$(\d+\.\d+)/);
+  if (numMatch) {
+    const v = parseFloat(numMatch[1]);
+    if (v > 0 && v < 5) return v;
+  }
+  return null;
+}
+
 export async function getRoute(
   origin: Coordinates,
   destination: Coordinates,
-  mapboxToken: string
+  googleKey: string
 ): Promise<{ geometry: GeoJSON.LineString; distanceMiles: number; durationMinutes: number }> {
-  const url = `${MAPBOX_BASE}/directions/v5/mapbox/driving/${origin.lng},${origin.lat};${destination.lng},${destination.lat}?geometries=geojson&overview=full&access_token=${mapboxToken}`;
+  const url = `${GOOGLE_MAPS_BASE}/directions/json?origin=${origin.lat},${origin.lng}&destination=${destination.lat},${destination.lng}&key=${googleKey}`;
   const res = await fetch(url);
-  if (!res.ok) throw new Error("Mapbox Directions API error");
+  if (!res.ok) throw new Error("Google Directions API error");
   const data = await res.json();
+  if (data.status !== "OK") throw new Error(`Directions: ${data.status} — ${data.error_message ?? ""}`);
   const route = data.routes[0];
+  const leg = route.legs[0];
+
+  // Decode the overview polyline
+  const decoded = decodePolyline(route.overview_polyline.points);
+  const geometry: GeoJSON.LineString = {
+    type: "LineString",
+    coordinates: decoded.map(([lat, lng]) => [lng, lat]),
+  };
+
   return {
-    geometry: route.geometry,
-    distanceMiles: route.distance / MILES_TO_METERS,
-    durationMinutes: route.duration / 60,
+    geometry,
+    distanceMiles: leg.distance.value / MILES_TO_METERS,
+    durationMinutes: leg.duration.value / 60,
   };
 }
 
 export async function fetchChargersAlongRoute(
   routeCoords: Coordinates[],
+  networkPrices: Record<string, number>,
   ocmApiKey?: string
 ): Promise<ChargerStation[]> {
-  const bbox = getRouteBBox(routeCoords, CORRIDOR_MILES);
+  const lats = routeCoords.map((c) => c.lat);
+  const lngs = routeCoords.map((c) => c.lng);
+  const bufferDeg = CORRIDOR_MILES / 69;
+  const minLat = Math.min(...lats) - bufferDeg;
+  const maxLat = Math.max(...lats) + bufferDeg;
+  const minLng = Math.min(...lngs) - bufferDeg;
+  const maxLng = Math.max(...lngs) + bufferDeg;
+
   const params = new URLSearchParams({
     output: "json",
-    levelid: "3", // DC Fast only
-    maxresults: "200",
+    levelid: "3",
+    maxresults: "300",
     compact: "true",
     verbose: "false",
-    latitude: String((bbox.minLat + bbox.maxLat) / 2),
-    longitude: String((bbox.minLng + bbox.maxLng) / 2),
-    distance: "300",
+    latitude: String((minLat + maxLat) / 2),
+    longitude: String((minLng + maxLng) / 2),
+    distance: "400",
     distanceunit: "Miles",
-    boundingbox: `(${bbox.minLat},${bbox.minLng}),(${bbox.maxLat},${bbox.maxLng})`,
+    boundingbox: `(${minLat},${minLng}),(${maxLat},${maxLng})`,
+    includecomments: "false",
   });
   if (ocmApiKey) params.set("key", ocmApiKey);
 
@@ -162,10 +162,8 @@ export async function fetchChargersAlongRoute(
     const distFromRoute = minDistanceToRoute(coords, routeCoords);
     if (distFromRoute > CORRIDOR_MILES) continue;
 
-    const network: string =
-      poi.OperatorInfo?.Title || "Default";
+    const network: string = poi.OperatorInfo?.Title ?? "Default";
 
-    // Get max power from connections
     let maxPower = 0;
     const connectorTypes: string[] = [];
     if (poi.Connections) {
@@ -174,45 +172,32 @@ export async function fetchChargersAlongRoute(
         if (conn.ConnectionType?.Title) connectorTypes.push(conn.ConnectionType.Title);
       }
     }
-    if (maxPower < 50) continue; // skip slow chargers
+    if (maxPower < 50) continue;
+
+    // Use OCM's published UsageCost first, fall back to network defaults
+    const publishedPrice = parseOCMPrice(poi.UsageCost ?? poi.AddressInfo?.UsageCost);
+    const fallbackPrice = (() => {
+      if (networkPrices[network] !== undefined) return networkPrices[network];
+      for (const [key, price] of Object.entries(networkPrices)) {
+        if (network.toLowerCase().includes(key.toLowerCase()) || key.toLowerCase().includes(network.toLowerCase())) return price;
+      }
+      return networkPrices["Default"] ?? 0.35;
+    })();
 
     stations.push({
       id: String(poi.ID),
       name: poi.AddressInfo.Title,
       network,
       coords,
-      address: [
-        poi.AddressInfo.AddressLine1,
-        poi.AddressInfo.Town,
-        poi.AddressInfo.StateOrProvince,
-      ]
-        .filter(Boolean)
-        .join(", "),
+      address: [poi.AddressInfo.AddressLine1, poi.AddressInfo.Town, poi.AddressInfo.StateOrProvince].filter(Boolean).join(", "),
       maxPowerKw: maxPower,
-      pricePerKwh: 0, // filled below
+      pricePerKwh: publishedPrice ?? fallbackPrice,
       connectorTypes: [...new Set(connectorTypes)],
       distanceFromRouteMiles: distFromRoute,
+      priceIsPublished: publishedPrice !== null,
     });
   }
   return stations;
-}
-
-function getPriceForNetwork(
-  network: string,
-  networkPrices: Record<string, number>
-): number {
-  // Exact match first
-  if (networkPrices[network] !== undefined) return networkPrices[network];
-  // Partial match
-  for (const [key, price] of Object.entries(networkPrices)) {
-    if (
-      network.toLowerCase().includes(key.toLowerCase()) ||
-      key.toLowerCase().includes(network.toLowerCase())
-    ) {
-      return price;
-    }
-  }
-  return networkPrices["Default"] ?? 0.35;
 }
 
 export function optimizeStops(
@@ -221,115 +206,63 @@ export function optimizeStops(
   stations: ChargerStation[],
   input: TripInput
 ): ChargingStop[] {
-  const { ev, startingSoC, targetArrivalSoC, networkPrices } = input;
-
-  // Assign prices
-  const priced = stations.map((s) => ({
-    ...s,
-    pricePerKwh: getPriceForNetwork(s.network, networkPrices),
-  }));
-
-  // Sort stations by route progress
-  const withProgress = priced.map((s) => ({
-    ...s,
-    progress: routeProgress(s.coords, routeCoords),
-  }));
-  withProgress.sort((a, b) => a.progress - b.progress);
-
-  // Convert SoC to kWh
+  const { ev, startingSoC, targetArrivalSoC } = input;
   const fullBattery = ev.batteryKwh;
+
+  const withProgress = stations
+    .map((s) => ({ ...s, progress: routeProgress(s.coords, routeCoords) }))
+    .sort((a, b) => a.progress - b.progress);
+
   let currentKwh = (startingSoC / 100) * fullBattery;
   let currentProgress = 0;
   const stops: ChargingStop[] = [];
 
   while (true) {
-    // How much range do we have from here?
-    const currentRangeMiles = (currentKwh / fullBattery) * ev.rangeMiles * (currentKwh / fullBattery > 0 ? 1 : 0);
     const usableKwh = currentKwh - MIN_SOC * fullBattery;
     const usableRangeMiles = usableKwh * ev.efficiencyMilesPerKwh;
     const remainingRouteMiles = (1 - currentProgress) * routeDistanceMiles;
+    const kwhNeededForDest = remainingRouteMiles / ev.efficiencyMilesPerKwh + (targetArrivalSoC / 100) * fullBattery;
 
-    // Can we reach destination?
-    const kwhNeededForDest =
-      remainingRouteMiles / ev.efficiencyMilesPerKwh +
-      (targetArrivalSoC / 100) * fullBattery;
-    if (currentKwh >= kwhNeededForDest) break; // we're good, no more stops needed
+    if (currentKwh >= kwhNeededForDest) break;
 
-    // Find all reachable stations ahead of us
     const reachable = withProgress.filter(
       (s) =>
         s.progress > currentProgress &&
-        s.progress * routeDistanceMiles - currentProgress * routeDistanceMiles <=
-          usableRangeMiles
+        (s.progress - currentProgress) * routeDistanceMiles <= usableRangeMiles
     );
 
-    if (reachable.length === 0) {
-      // No reachable stations — trip impossible with current parameters
-      break;
-    }
-
-    // Score each candidate stop
-    // Cost = energy_cost + detour_penalty - "value" of cheap charging now vs later
-    // Strategy: find lowest total cost stop, considering:
-    //   1. Price at this charger × kWh we need to add
-    //   2. Detour penalty
-    // We want to "bank" cheap kWh and skip expensive chargers if we can reach a cheaper one
+    if (reachable.length === 0) break;
 
     let bestStop = reachable[0];
     let bestScore = Infinity;
-
     for (const candidate of reachable) {
-      // How much do we charge here? Just enough to reach next cheapest option, or 80%
-      const kwhToAdd = Math.min(
-        (CHARGE_TO_SOC * fullBattery) - currentKwh,
-        fullBattery - currentKwh
-      );
-      const detourMiles = candidate.distanceFromRouteMiles * 2; // round trip
-      const energyCost = kwhToAdd * candidate.pricePerKwh;
-      const detourCost = detourMiles * DETOUR_PENALTY_PER_MILE;
-      const score = energyCost + detourCost;
-
-      if (score < bestScore) {
-        bestScore = score;
-        bestStop = candidate;
-      }
+      const kwhToAdd = Math.min(CHARGE_TO_SOC * fullBattery - currentKwh, fullBattery - currentKwh);
+      const detourMiles = candidate.distanceFromRouteMiles * 2;
+      const score = kwhToAdd * candidate.pricePerKwh + detourMiles * DETOUR_PENALTY_PER_MILE;
+      if (score < bestScore) { bestScore = score; bestStop = candidate; }
     }
 
-    // Calculate charge amount: enough to reach destination comfortably or next stop
-    const milesFromHere =
-      (bestStop.progress - currentProgress) * routeDistanceMiles;
-    const kwhToReachStop = milesFromHere / ev.efficiencyMilesPerKwh;
-    const arrivalKwh = currentKwh - kwhToReachStop;
+    const milesFromHere = (bestStop.progress - currentProgress) * routeDistanceMiles;
+    const arrivalKwh = currentKwh - milesFromHere / ev.efficiencyMilesPerKwh;
     const arrivalSoC = (arrivalKwh / fullBattery) * 100;
 
-    // Charge to 80% or just enough to reach destination
-    const kwhForDest =
-      ((1 - bestStop.progress) * routeDistanceMiles) / ev.efficiencyMilesPerKwh +
-      (targetArrivalSoC / 100) * fullBattery;
-    const chargeTarget = Math.min(
-      CHARGE_TO_SOC * fullBattery,
-      Math.max(kwhForDest, arrivalKwh + 0.1)
-    );
+    const kwhForDest = ((1 - bestStop.progress) * routeDistanceMiles) / ev.efficiencyMilesPerKwh + (targetArrivalSoC / 100) * fullBattery;
+    const chargeTarget = Math.min(CHARGE_TO_SOC * fullBattery, Math.max(kwhForDest, arrivalKwh + 0.1));
     const kwhAdded = Math.max(0, chargeTarget - arrivalKwh);
     const departureSoC = ((arrivalKwh + kwhAdded) / fullBattery) * 100;
-
-    // Charge time: simplified — actual charge rate tapers above 80% but we approximate
     const effectiveChargekW = Math.min(bestStop.maxPowerKw, ev.maxChargekW) * 0.85;
     const chargeTimeMinutes = (kwhAdded / effectiveChargekW) * 60;
-
     const detourMiles = bestStop.distanceFromRouteMiles * 2;
-    const energyCostUsd = kwhAdded * bestStop.pricePerKwh;
-    const detourCostUsd = detourMiles * DETOUR_PENALTY_PER_MILE;
 
     stops.push({
       station: bestStop,
       arrivalSoC: Math.round(arrivalSoC),
       departureSoC: Math.round(departureSoC),
       kwhAdded: Math.round(kwhAdded * 10) / 10,
-      energyCostUsd: Math.round(energyCostUsd * 100) / 100,
+      energyCostUsd: Math.round(kwhAdded * bestStop.pricePerKwh * 100) / 100,
       chargeTimeMinutes: Math.round(chargeTimeMinutes),
       detourMiles: Math.round(detourMiles * 10) / 10,
-      totalCostUsd: Math.round((energyCostUsd + detourCostUsd) * 100) / 100,
+      totalCostUsd: Math.round((kwhAdded * bestStop.pricePerKwh + detourMiles * DETOUR_PENALTY_PER_MILE) * 100) / 100,
     });
 
     currentKwh = arrivalKwh + kwhAdded;
@@ -340,36 +273,27 @@ export function optimizeStops(
 }
 
 export async function planTrip(input: TripInput): Promise<TripPlan> {
-  const mapboxToken = process.env.NEXT_PUBLIC_MAPBOX_TOKEN!;
+  const googleKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_KEY!;
   const ocmKey = process.env.NEXT_PUBLIC_OCM_API_KEY;
 
   const { geometry, distanceMiles, durationMinutes } = await getRoute(
     input.origin.coords,
     input.destination.coords,
-    mapboxToken
+    googleKey
   );
 
-  const routeCoords: Coordinates[] = (
-    geometry.coordinates as [number, number][]
-  ).map(([lng, lat]) => ({ lat, lng }));
+  const routeCoords: Coordinates[] = (geometry.coordinates as [number, number][]).map(
+    ([lng, lat]) => ({ lat, lng })
+  );
 
-  const stations = await fetchChargersAlongRoute(routeCoords, ocmKey);
-
+  const stations = await fetchChargersAlongRoute(routeCoords, input.networkPrices, ocmKey);
   const stops = optimizeStops(routeCoords, distanceMiles, stations, input);
 
   return {
     stops,
-    totalEnergyCostUsd:
-      Math.round(stops.reduce((s, stop) => s + stop.energyCostUsd, 0) * 100) /
-      100,
-    totalChargeTimeMinutes: stops.reduce(
-      (s, stop) => s + stop.chargeTimeMinutes,
-      0
-    ),
-    totalDetourMiles:
-      Math.round(
-        stops.reduce((s, stop) => s + stop.detourMiles, 0) * 10
-      ) / 10,
+    totalEnergyCostUsd: Math.round(stops.reduce((s, stop) => s + stop.energyCostUsd, 0) * 100) / 100,
+    totalChargeTimeMinutes: stops.reduce((s, stop) => s + stop.chargeTimeMinutes, 0),
+    totalDetourMiles: Math.round(stops.reduce((s, stop) => s + stop.detourMiles, 0) * 10) / 10,
     routeGeometry: geometry,
     routeDistanceMiles: Math.round(distanceMiles),
     routeDurationMinutes: Math.round(durationMinutes),

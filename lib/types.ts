@@ -27,6 +27,7 @@ export interface ChargerStation {
   address: string;
   maxPowerKw: number;
   pricePerKwh: number;
+  priceIsPublished: boolean;
   connectorTypes: string[];
   distanceFromRouteMiles: number;
 }
