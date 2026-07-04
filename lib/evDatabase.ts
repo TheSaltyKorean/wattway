@@ -153,15 +153,20 @@ export const EV_DATABASE: EVModel[] = [
   },
 ];
 
+// Typical non-member DCFC rates, 2026 US market survey
 export const DEFAULT_NETWORK_PRICES: Record<string, number> = {
-  "Tesla": 0.28,
-  "Electrify America": 0.43,
-  "ChargePoint": 0.31,
-  "Blink": 0.39,
-  "EVgo": 0.36,
-  "Francis Energy": 0.25,
-  "Volta": 0.29,
-  "Default": 0.35,
+  "Tesla": 0.40,
+  "Electrify America": 0.56,
+  "ChargePoint": 0.48,
+  "Blink": 0.59,
+  "EVgo": 0.55,
+  "Francis Energy": 0.39,
+  "Shell Recharge": 0.52,
+  "Volta": 0.49,
+  "Rivian": 0.44,
+  "bp pulse": 0.55,
+  "Buc-ee's": 0.40,
+  "Default": 0.45,
 };
 
 export function getEVById(id: string): EVModel | undefined {

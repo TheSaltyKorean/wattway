@@ -1,29 +1,16 @@
 "use client";
 import { useEffect, useRef } from "react";
-import { Loader } from "@googlemaps/js-api-loader";
+import { ensureMapsConfigured, importLibrary } from "@/lib/maps";
 import { TripPlan, ChargingStop } from "@/lib/types";
 
 interface Props {
   plan: TripPlan | null;
 }
 
-let loaderInstance: Loader | null = null;
-
-function getLoader(apiKey: string): Loader {
-  if (!loaderInstance) {
-    loaderInstance = new Loader({
-      apiKey,
-      version: "weekly",
-      libraries: ["places", "geometry"],
-    });
-  }
-  return loaderInstance;
-}
-
 export default function MapView({ plan }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<google.maps.Map | null>(null);
-  const rendererRef = useRef<google.maps.DirectionsRenderer | null>(null);
+  const polylineRef = useRef<google.maps.Polyline | null>(null);
   const markersRef = useRef<google.maps.marker.AdvancedMarkerElement[]>([]);
 
   // Init map
@@ -31,8 +18,8 @@ export default function MapView({ plan }: Props) {
     const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_KEY;
     if (!apiKey || !containerRef.current) return;
 
-    getLoader(apiKey)
-      .importLibrary("maps")
+    ensureMapsConfigured(apiKey);
+    importLibrary("maps")
       .then(({ Map }) => {
         if (mapRef.current) return;
         mapRef.current = new Map(containerRef.current!, {
@@ -61,44 +48,32 @@ export default function MapView({ plan }: Props) {
     markersRef.current.forEach((m) => { m.map = null; });
     markersRef.current = [];
 
-    // Clear previous renderer
-    if (rendererRef.current) {
-      rendererRef.current.setMap(null);
-      rendererRef.current = null;
+    // Clear previous route line
+    if (polylineRef.current) {
+      polylineRef.current.setMap(null);
+      polylineRef.current = null;
     }
 
-    getLoader(apiKey)
-      .importLibrary("maps")
-      .then(async ({ DirectionsRenderer, LatLngBounds }) => {
-        // Re-request directions so we get a proper DirectionsResult for rendering
-        const { DirectionsService } = await (getLoader(apiKey).importLibrary("routes") as Promise<{ DirectionsService: typeof google.maps.DirectionsService }>);
-
-        // Extract origin and destination from route geometry
+    ensureMapsConfigured(apiKey);
+    importLibrary("maps")
+      .then(async ({ Polyline }) => {
+        const { LatLngBounds } = await importLibrary("core");
         const coords = plan.routeGeometry.coordinates as [number, number][];
-        const origin = { lat: coords[0][1], lng: coords[0][0] };
-        const dest = { lat: coords[coords.length - 1][1], lng: coords[coords.length - 1][0] };
 
-        const ds = new DirectionsService();
-        const result = await ds.route({
-          origin,
-          destination: dest,
-          travelMode: google.maps.TravelMode.DRIVING,
+        polylineRef.current = new Polyline({
+          map,
+          path: coords.map(([lng, lat]) => ({ lat, lng })),
+          strokeColor: "#4ade80",
+          strokeWeight: 4,
+          strokeOpacity: 0.8,
         });
-
-        const renderer = new DirectionsRenderer({
-          suppressMarkers: true,
-          polylineOptions: { strokeColor: "#4ade80", strokeWeight: 4, strokeOpacity: 0.8 },
-        });
-        renderer.setMap(map);
-        renderer.setDirections(result);
-        rendererRef.current = renderer;
 
         // Fit bounds
         const bounds = new LatLngBounds();
         coords.forEach(([lng, lat]) => bounds.extend({ lat, lng }));
 
         // Add charger stop markers
-        const { AdvancedMarkerElement } = await (getLoader(apiKey).importLibrary("marker") as Promise<{ AdvancedMarkerElement: typeof google.maps.marker.AdvancedMarkerElement }>);
+        const { AdvancedMarkerElement } = await importLibrary("marker");
 
         plan.stops.forEach((stop: ChargingStop, i: number) => {
           const priceColor =

@@ -1,3 +1,5 @@
+import type { LineString } from "geojson";
+
 export interface EVModel {
   id: string;
   make: string;
@@ -26,6 +28,10 @@ export interface ChargerStation {
   coords: Coordinates;
   address: string;
   maxPowerKw: number;
+  fastPortCount: number;
+  recentlyVerified: boolean;
+  operatorUrl: string | null;
+  stationUrl: string | null;
   pricePerKwh: number;
   priceIsPublished: boolean;
   connectorTypes: string[];
@@ -41,14 +47,17 @@ export interface ChargingStop {
   chargeTimeMinutes: number;
   detourMiles: number;
   totalCostUsd: number;
+  legDistanceMiles: number;
 }
 
 export interface TripPlan {
   stops: ChargingStop[];
+  arrivalSoC: number;
+  finalLegMiles: number;
   totalEnergyCostUsd: number;
   totalChargeTimeMinutes: number;
   totalDetourMiles: number;
-  routeGeometry: GeoJSON.LineString;
+  routeGeometry: LineString;
   routeDistanceMiles: number;
   routeDurationMinutes: number;
 }
@@ -57,11 +66,21 @@ export interface NetworkPrices {
   [network: string]: number;
 }
 
+export interface MembershipPlan {
+  id: string;
+  label: string;
+  networkKey: string;
+  discountPerKwh: number;
+  monthlyFeeUsd: number;
+}
+
 export interface TripInput {
   origin: Waypoint;
   destination: Waypoint;
+  waypoints?: Waypoint[];
   ev: EVModel;
   startingSoC: number;
   targetArrivalSoC: number;
   networkPrices: NetworkPrices;
+  memberships?: MembershipPlan[];
 }

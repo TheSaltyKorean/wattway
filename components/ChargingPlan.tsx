@@ -4,6 +4,7 @@ import { TripPlan, ChargingStop } from "@/lib/types";
 interface Props {
   plan: TripPlan;
   startingSoC: number;
+  destinationAddress?: string;
 }
 
 function networkColor(network: string): string {
@@ -73,7 +74,9 @@ function StopCard({ stop, index }: { stop: ChargingStop; index: number }) {
         <div className="text-center">
           <p className="text-xs text-[var(--text-muted)]">Charge time</p>
           <p className="font-semibold">{stop.chargeTimeMinutes} min</p>
-          <p className="text-xs text-[var(--text-muted)]">{stop.station.maxPowerKw}kW max</p>
+          <p className="text-xs text-[var(--text-muted)]">
+            {stop.station.maxPowerKw}kW × {stop.station.fastPortCount || 1}
+          </p>
         </div>
         <div className="text-center">
           <p className="text-xs text-[var(--text-muted)]">Rate</p>
@@ -87,11 +90,32 @@ function StopCard({ stop, index }: { stop: ChargingStop; index: number }) {
           ↗ {stop.detourMiles.toFixed(1)} mi detour
         </p>
       )}
+
+      <div className="flex gap-4 pt-1 border-t border-[var(--border)] text-xs">
+        <a
+          href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${stop.station.name} ${stop.station.address}`)}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-[var(--accent)] hover:underline"
+        >
+          Google reviews ↗
+        </a>
+        {(stop.station.stationUrl || stop.station.operatorUrl) && (
+          <a
+            href={(stop.station.stationUrl || stop.station.operatorUrl)!}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-[var(--accent)] hover:underline"
+          >
+            {stop.station.stationUrl ? "Station site ↗" : "Operator site ↗"}
+          </a>
+        )}
+      </div>
     </div>
   );
 }
 
-export default function ChargingPlan({ plan, startingSoC }: Props) {
+export default function ChargingPlan({ plan, startingSoC, destinationAddress }: Props) {
   const hrs = Math.floor(plan.routeDurationMinutes / 60);
   const mins = Math.round(plan.routeDurationMinutes % 60);
   const chargeHrs = Math.floor(plan.totalChargeTimeMinutes / 60);
@@ -143,10 +167,39 @@ export default function ChargingPlan({ plan, startingSoC }: Props) {
             Optimal charging sequence
           </p>
           {plan.stops.map((stop, i) => (
-            <StopCard key={stop.station.id} stop={stop} index={i} />
+            <div key={stop.station.id} className="space-y-3">
+              <p className="text-xs text-[var(--text-muted)] text-center tabular-nums">
+                ↓ &nbsp;{stop.legDistanceMiles} mi
+              </p>
+              <StopCard stop={stop} index={i} />
+            </div>
           ))}
         </div>
       )}
+
+      {/* Destination */}
+      {plan.stops.length > 0 && (
+        <p className="text-xs text-[var(--text-muted)] text-center tabular-nums">
+          ↓ &nbsp;{plan.finalLegMiles} mi
+        </p>
+      )}
+      <div className="bg-[var(--surface-2)] border border-[var(--border)] rounded-xl p-4 space-y-3">
+        <div className="flex items-center gap-3 min-w-0">
+          <div className="w-7 h-7 rounded-full bg-[var(--accent-dim)] flex items-center justify-center text-sm shrink-0">
+            🏁
+          </div>
+          <div className="min-w-0">
+            <p className="font-medium text-sm truncate">Destination</p>
+            {destinationAddress && (
+              <p className="text-xs text-[var(--text-muted)] truncate">{destinationAddress}</p>
+            )}
+          </div>
+        </div>
+        <div className="space-y-1">
+          <p className="text-xs text-[var(--text-muted)]">Arrive with</p>
+          <SoCBar value={plan.arrivalSoC} />
+        </div>
+      </div>
     </div>
   );
 }

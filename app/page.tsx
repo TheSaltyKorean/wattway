@@ -1,20 +1,57 @@
 "use client";
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import dynamic from "next/dynamic";
 import { EVModel, TripPlan, Waypoint } from "@/lib/types";
-import { EV_DATABASE, DEFAULT_NETWORK_PRICES } from "@/lib/evDatabase";
+import { EV_DATABASE, DEFAULT_NETWORK_PRICES, getEVById } from "@/lib/evDatabase";
 import { planTrip } from "@/lib/optimizer";
 import TripForm from "@/components/TripForm";
 import EVSelector from "@/components/EVSelector";
+import MembershipSelector from "@/components/MembershipSelector";
 import ChargingPlan from "@/components/ChargingPlan";
+import { getMembershipById } from "@/lib/memberships";
 
 const MapView = dynamic(() => import("@/components/MapView"), { ssr: false });
+
+export interface ViaStop {
+  id: number;
+  wp: Waypoint | null;
+}
 
 export default function Home() {
   const [origin, setOrigin] = useState<Waypoint | null>(null);
   const [destination, setDestination] = useState<Waypoint | null>(null);
+  const [vias, setVias] = useState<ViaStop[]>([]);
   const [ev, setEV] = useState<EVModel>(EV_DATABASE[1]); // Model Y default
+
+  const [membershipIds, setMembershipIds] = useState<string[]>([]);
+
+  // Remember the user's car and memberships across visits
+  useEffect(() => {
+    const savedId = localStorage.getItem("wattway.evId");
+    if (savedId) {
+      const saved = getEVById(savedId);
+      if (saved) setEV(saved);
+    }
+    const savedMemberships = localStorage.getItem("wattway.memberships");
+    if (savedMemberships) {
+      try {
+        const ids = JSON.parse(savedMemberships);
+        if (Array.isArray(ids)) setMembershipIds(ids.filter((id) => getMembershipById(id)));
+      } catch { /* ignore corrupt state */ }
+    }
+  }, []);
+
+  const handleEVChange = useCallback((model: EVModel) => {
+    setEV(model);
+    localStorage.setItem("wattway.evId", model.id);
+  }, []);
+
+  const handleMembershipsChange = useCallback((ids: string[]) => {
+    setMembershipIds(ids);
+    localStorage.setItem("wattway.memberships", JSON.stringify(ids));
+  }, []);
   const [startingSoC, setStartingSoC] = useState(80);
+  const [arrivalSoC, setArrivalSoC] = useState(10);
   const [plan, setPlan] = useState<TripPlan | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -27,10 +64,14 @@ export default function Home() {
       const result = await planTrip({
         origin,
         destination,
+        waypoints: vias.map((v) => v.wp).filter((w): w is Waypoint => w !== null),
         ev,
         startingSoC,
-        targetArrivalSoC: 10,
+        targetArrivalSoC: arrivalSoC,
         networkPrices: DEFAULT_NETWORK_PRICES,
+        memberships: membershipIds
+          .map(getMembershipById)
+          .filter((m): m is NonNullable<typeof m> => m !== undefined),
       });
       setPlan(result);
     } catch (e) {
@@ -38,7 +79,7 @@ export default function Home() {
     } finally {
       setLoading(false);
     }
-  }, [origin, destination, ev, startingSoC]);
+  }, [origin, destination, vias, ev, startingSoC, arrivalSoC, membershipIds]);
 
   const canPlan = origin && destination && !loading;
 
@@ -57,17 +98,23 @@ export default function Home() {
           </p>
         </div>
 
-        {/* Form */}
-        <div className="px-5 py-4 space-y-5 shrink-0">
+        {/* Form + results scroll together */}
+        <div className="flex-1 overflow-y-auto">
+        <div className="px-5 py-4 space-y-5">
           <TripForm
             origin={origin}
             destination={destination}
+            vias={vias}
             startingSoC={startingSoC}
+            arrivalSoC={arrivalSoC}
             onOriginChange={setOrigin}
             onDestinationChange={setDestination}
+            onViasChange={setVias}
             onSoCChange={setStartingSoC}
+            onArrivalSoCChange={setArrivalSoC}
           />
-          <EVSelector value={ev.id} onChange={setEV} />
+          <EVSelector value={ev.id} onChange={handleEVChange} />
+          <MembershipSelector selected={membershipIds} onChange={handleMembershipsChange} />
 
           <button
             onClick={handlePlan}
@@ -94,9 +141,9 @@ export default function Home() {
         </div>
 
         {/* Results */}
-        <div className="flex-1 overflow-y-auto px-5 pb-5">
+        <div className="px-5 pb-5">
           {plan ? (
-            <ChargingPlan plan={plan} startingSoC={startingSoC} />
+            <ChargingPlan plan={plan} startingSoC={startingSoC} destinationAddress={destination?.address} />
           ) : (
             !loading && (
               <div className="text-center py-12 text-[var(--text-muted)]">
@@ -127,6 +174,7 @@ export default function Home() {
               </div>
             )
           )}
+        </div>
         </div>
       </div>
 
