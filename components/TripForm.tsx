@@ -109,19 +109,33 @@ export default function TripForm({
   const [locState, setLocState] = useState<"idle" | "locating" | "active" | "error">("idle");
 
   const useCurrentLocation = () => {
-    if (!navigator.geolocation) { setLocState("error"); return; }
     setLocState("locating");
-    navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        onOriginChange({
-          address: "Current location",
-          coords: { lat: pos.coords.latitude, lng: pos.coords.longitude },
-        });
-        setLocState("active");
-      },
-      () => setLocState("error"),
-      { enableHighAccuracy: false, timeout: 10000 }
-    );
+    const setFrom = (lat: number, lng: number, label: string) => {
+      onOriginChange({ address: label, coords: { lat, lng } });
+      setLocState("active");
+    };
+    // Rough city-level fallback for insecure origins (browsers block GPS on
+    // plain http except localhost) or when the user denies the GPS prompt
+    const ipFallback = async () => {
+      try {
+        const res = await fetch("https://ipapi.co/json/");
+        const d = await res.json();
+        if (d.latitude && d.longitude) {
+          setFrom(d.latitude, d.longitude, `Near ${d.city ?? "current location"} (approx.)`);
+        } else setLocState("error");
+      } catch {
+        setLocState("error");
+      }
+    };
+    if (window.isSecureContext && navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => setFrom(pos.coords.latitude, pos.coords.longitude, "Current location"),
+        () => { void ipFallback(); },
+        { enableHighAccuracy: false, timeout: 10000 }
+      );
+    } else {
+      void ipFallback();
+    }
   };
 
   return (
@@ -133,7 +147,7 @@ export default function TripForm({
           className="absolute top-0 right-0 text-xs text-[var(--accent)] hover:opacity-80 transition-opacity"
         >
           {locState === "locating" ? "locating…"
-            : locState === "active" && origin?.address === "Current location" ? "📍 using current location"
+            : locState === "active" ? `📍 ${origin?.address ?? "using current location"}`
             : locState === "error" ? "location unavailable"
             : "📍 current location"}
         </button>
