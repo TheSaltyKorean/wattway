@@ -1,50 +1,58 @@
 # WattWay ⚡
 
-**Cost-optimized EV trip planner.** Most EV apps find chargers — WattWay finds the *cheapest* way to get from A to B, picking the optimal sequence of charging stops based on network prices, detour distance, and your vehicle's range.
+**Cost-optimized EV trip planner.** Most EV apps find chargers — WattWay finds the *cheapest realistic* way to get from A to B, picking a minimal sequence of charging stops based on network prices, membership discounts, charger power and reliability, detour distance, and your vehicle's range.
 
-![WattWay screenshot](public/screenshot.png)
+![WattWay screenshot](public/screenshot.jpg)
+
+## Features
+
+- **Fewest-stops optimizer** — drives as far as comfortably possible, then picks the best charger near the edge of range; charges only as much as the trip needs (past 80% only when that finishes the trip, with taper-aware time estimates)
+- **Multi-stop trips** — add intermediate waypoints; the route and charging plan account for them
+- **Required charge at arrival** — tell it how much battery you need on arrival (e.g. 30% to get around town, or 60% for the return leg) and the plan works backward from that
+- **Membership pricing** — check the plans you subscribe to (Tesla, EA Pass+, EVgo Plus, Shell Recharge Plus) and member rates apply to matching networks
+- **Charger quality heuristics** — penalizes sub-100 kW stations, single-plug sites, and stations not recently verified on Open Charge Map; excludes Tesla-only Superchargers for non-Tesla EVs
+- **Published pricing when available** — parses Open Charge Map's `UsageCost` where the community has recorded real rates (marked ✓); otherwise falls back to per-network 2026 rate estimates
+- **Per-stop details** — arrival/departure state of charge, energy cost, charge time, leg distances, detours, plus Google reviews and operator-site links
+- **Remembers your car and memberships** (localStorage)
+- **Current location** as trip origin (browser geolocation; requires localhost or HTTPS)
 
 ## How the optimizer works
 
-1. **Route**: Fetches driving directions from Mapbox
-2. **Chargers**: Pulls all DC Fast Charge stations within 10 miles of your route from Open Charge Map
-3. **Pricing**: Applies known $/kWh rates per charging network (user-adjustable)
-4. **Optimization**: Greedy forward-search that:
-   - Tracks your battery state of charge (SoC) mile by mile
-   - Never lets you drop below 10% SoC
-   - Scores each candidate stop by `(energy_cost + detour_penalty)`
-   - Charges to 80% at each stop (optimal for DCFC speed)
-   - Skips expensive chargers if a cheaper one is within reach
+1. **Route**: Google **Routes API** (`computeRoutes`) with optional intermediate waypoints
+2. **Chargers**: all DC fast-charge stations (≥50 kW) within 10 miles of the route from **Open Charge Map**
+3. **Pricing**: published OCM rates when present → membership discounts → per-network defaults
+4. **Optimization**: greedy fewest-stops forward search
+   - tracks state of charge mile by mile; never drops below 10%
+   - only considers chargers in the far 45% of current usable range
+   - scores candidates on price + detour + slow/single-plug/unverified penalties + low-arrival-SoC comfort penalty
+   - charges to exactly what the remaining trip needs (cap 80%, or up to 95% when that completes the trip)
 
 ## Setup
 
 ### 1. Clone and install
 
 ```bash
-git clone https://github.com/TheSaltyKorean/wattway.git
+git clone <this-repo>
 cd wattway
 npm install
 ```
 
 ### 2. API keys
 
-Copy `.env.local.example` to `.env.local` and fill in:
+Keys live in `.env` (committed — this repo is private) and can be overridden in `.env.local`.
 
-```bash
-cp .env.local.example .env.local
-```
+**Google Maps Platform** (`NEXT_PUBLIC_GOOGLE_MAPS_KEY`) — [console.cloud.google.com](https://console.cloud.google.com/)
+- Enable exactly these APIs: **Maps JavaScript API**, **Routes API**, **Places API (New)**
+  (the classic Directions/Places APIs are legacy — new projects can't use them)
+- The project must be linked to an **active billing account**; per-SKU free tiers (~10k calls/month) cover personal use
+- Restrict the key: *Websites* → your origins (e.g. `http://localhost:3100/*`); *APIs* → the three above
 
-**Mapbox** (required for routing and map):
-- Sign up at [mapbox.com](https://account.mapbox.com/)
-- Free tier: 50,000 map loads/month
-- Add your public token as `NEXT_PUBLIC_MAPBOX_TOKEN`
+**Open Charge Map** (`NEXT_PUBLIC_OCM_API_KEY`) — [openchargemap.org](https://openchargemap.org/site/develop/api)
+- **Required** (anonymous access was discontinued); free signup
 
-**Open Charge Map** (optional):
-- API works without a key but rate-limited
-- Get a free key at [openchargemap.org](https://openchargemap.org/site/develop/api)
-- Add as `NEXT_PUBLIC_OCM_API_KEY`
+> Both keys are `NEXT_PUBLIC_` and ship in the browser bundle — that's inherent to a client-side maps app. The referrer restriction is what protects the Google key.
 
-### 3. Run
+### 3. Run (dev)
 
 ```bash
 npm run dev
@@ -52,36 +60,49 @@ npm run dev
 
 Open [http://localhost:3000](http://localhost:3000).
 
-## Default network prices ($/kWh)
+### 4. Deploy (Docker)
 
-| Network | Price |
-|---------|-------|
-| Tesla Supercharger | $0.28 |
-| ChargePoint | $0.31 |
-| EVgo | $0.36 |
-| Blink | $0.39 |
-| Electrify America | $0.43 |
+```bash
+docker build \
+  --build-arg NEXT_PUBLIC_GOOGLE_MAPS_KEY=<key> \
+  --build-arg NEXT_PUBLIC_OCM_API_KEY=<key> \
+  -t wattway .
+docker run -d --name wattway --restart unless-stopped -p 3100:3000 wattway
+```
 
-Prices vary by location and membership. The app uses these as defaults — pricing settings will be editable in a future update.
+Keys are baked in at build time (`NEXT_PUBLIC_` semantics) — rebuild the image to change them. Add each serving origin (`http://<host>:3100/*`) to the Google key's referrer allowlist.
+
+## Default network prices ($/kWh, 2026 non-member rates)
+
+| Network | Price | Member |
+|---------|-------|--------|
+| Tesla Supercharger | $0.40 | $0.30 |
+| Francis Energy | $0.39 | — |
+| ChargePoint | $0.48 | — |
+| Shell Recharge | $0.52 | $0.45 |
+| EVgo | $0.55 | $0.45 |
+| Electrify America | $0.56 | $0.46 |
+| Blink | $0.59 | — |
+| Other/unknown | $0.45 | — |
+
+Real prices vary by site, time of day, and state. Published OCM rates override these when available (marked ✓ in stop cards). Edit `lib/evDatabase.ts` and `lib/memberships.ts` to tune.
 
 ## Vehicle database
 
-Includes 12 popular EVs with accurate battery size, range, max charge rate, and efficiency. Adding more is easy — edit `lib/evDatabase.ts`.
+15 popular EVs with battery size, range, max charge rate, and efficiency — edit `lib/evDatabase.ts` to add more. Your selection is remembered across visits.
 
-## Deploy to Vercel
+## Architecture notes
 
-```bash
-npx vercel
-```
-
-Set `NEXT_PUBLIC_MAPBOX_TOKEN` in your Vercel project environment variables.
+- 100% client-side (no server code) — Next.js 14, App Router, Tailwind; all API calls happen in the browser
+- Google Maps JS via the v2 functional loader (`setOptions`/`importLibrary`); address search via `PlaceAutocompleteElement` (`gmp-select`)
+- Route line drawn from Routes API polyline directly (no extra Directions call)
+- Docker image is a multi-stage `standalone` build (`node:20-alpine`)
 
 ## Roadmap
 
-- [ ] Real-time pricing via network APIs
-- [ ] Membership pricing (EA Pass+, etc.)
-- [ ] Multiple route alternatives with cost comparison
+- [ ] Real-time pricing (would require a commercial feed, e.g. Paren)
 - [ ] Time-of-use pricing awareness
+- [ ] Multiple route alternatives with cost comparison
 - [ ] Share trip link
 - [ ] Mobile PWA
 
