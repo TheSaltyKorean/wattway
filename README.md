@@ -2,6 +2,13 @@
 
 **Cost-optimized EV trip planner.** Most EV apps find chargers — WattWay finds the *cheapest realistic* way to get from A to B, picking a minimal sequence of charging stops based on network prices, membership discounts, charger power and reliability, detour distance, and your vehicle's range.
 
+**Lightweight by design.** WattWay is a fully static site — no backend, no
+database, no server costs. It's hosted on GitHub Pages
+(**[thesaltykorean.github.io/wattway](https://thesaltykorean.github.io/wattway/)**),
+and your browser does all the work: routing, charger lookup, and stop
+optimization run entirely client-side against the Google Maps and Open Charge
+Map APIs.
+
 ![WattWay screenshot](public/screenshot.jpg)
 
 ## Features

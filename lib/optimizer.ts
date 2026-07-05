@@ -172,15 +172,23 @@ export async function fetchChargersAlongRoute(
   memberships: MembershipPlan[],
   ocmApiKey?: string
 ): Promise<ChargerStation[]> {
-  // Sample query centers every SEGMENT_MILES along the route
+  // Sample query centers at exact SEGMENT_MILES intervals, interpolating
+  // within segments — snapping to vertices can leave coverage gaps when the
+  // polyline's vertices are far apart
   const samples: Coordinates[] = [routeCoords[0]];
-  let acc = 0;
+  let sinceLast = 0;
   for (let i = 0; i < routeCoords.length - 1; i++) {
-    acc += haversine(routeCoords[i], routeCoords[i + 1]);
-    if (acc >= SEGMENT_MILES) {
-      samples.push(routeCoords[i + 1]);
-      acc = 0;
+    let a = routeCoords[i];
+    const b = routeCoords[i + 1];
+    let segLen = haversine(a, b);
+    while (segLen > 0 && sinceLast + segLen >= SEGMENT_MILES) {
+      const t = (SEGMENT_MILES - sinceLast) / segLen;
+      a = { lat: a.lat + (b.lat - a.lat) * t, lng: a.lng + (b.lng - a.lng) * t };
+      samples.push(a);
+      segLen = haversine(a, b);
+      sinceLast = 0;
     }
+    sinceLast += segLen;
   }
   samples.push(routeCoords[routeCoords.length - 1]);
 

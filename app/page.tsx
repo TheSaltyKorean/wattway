@@ -187,6 +187,7 @@ export default function Home() {
             arrivalSoC={arrivalSoC}
             onOriginChange={setOrigin}
             onDestinationChange={setDestination}
+            onSwap={() => { setOrigin(destination); setDestination(origin); }}
             onViasChange={setVias}
             onSoCChange={setStartingSoC}
             onArrivalSoCChange={setArrivalSoC}
@@ -252,6 +253,20 @@ export default function Home() {
               </div>
             )
           )}
+        </div>
+
+        {/* Support */}
+        <div className="px-5 pb-4 pt-1 text-center">
+          <a
+            href="https://venmo.com/u/TheSaltyKorean"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-xs text-[var(--text-muted)] hover:text-[var(--accent)] transition-colors"
+          >
+            Enjoying WattWay? Support it on{" "}
+            <span className="font-semibold" style={{ color: "#3D95CE" }}>Venmo</span>{" "}
+            @TheSaltyKorean
+          </a>
         </div>
         </div>
     </div>
