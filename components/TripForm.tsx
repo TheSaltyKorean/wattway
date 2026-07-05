@@ -221,7 +221,7 @@ export default function TripForm({
         </div>
         <input
           type="range"
-          min={5}
+          min={10} /* matches the optimizer's 10% reserve floor */
           max={80}
           step={1}
           value={arrivalSoC}

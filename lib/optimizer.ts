@@ -56,7 +56,11 @@ function minDistanceToRoute(point: Coordinates, routeCoords: Coordinates[]): num
 // so later passes stay eligible after the plan advances beyond the first one.
 const PASS_SEPARATION_MILES = 25;
 
-function routePasses(point: Coordinates, routeCoords: Coordinates[], corridorMiles: number): number[] {
+function routePasses(
+  point: Coordinates,
+  routeCoords: Coordinates[],
+  corridorMiles: number
+): { progress: number; dist: number }[] {
   const segLens: number[] = [];
   let totalLen = 0;
   for (let i = 0; i < routeCoords.length - 1; i++) {
@@ -64,7 +68,7 @@ function routePasses(point: Coordinates, routeCoords: Coordinates[], corridorMil
     segLens.push(l);
     totalLen += l;
   }
-  if (totalLen === 0) return [0];
+  if (totalLen === 0) return [{ progress: 0, dist: 0 }];
 
   const cands: { progress: number; dist: number }[] = [];
   let cumLen = 0;
@@ -81,19 +85,19 @@ function routePasses(point: Coordinates, routeCoords: Coordinates[], corridorMil
   if (cands.length === 0) return [];
 
   cands.sort((x, y) => x.progress - y.progress);
-  const passes: number[] = [];
+  const passes: { progress: number; dist: number }[] = [];
   let best = cands[0];
   let lastProgress = cands[0].progress;
   for (const c of cands.slice(1)) {
     if ((c.progress - lastProgress) * totalLen > PASS_SEPARATION_MILES) {
-      passes.push(best.progress);
+      passes.push(best);
       best = c;
     } else if (c.dist < best.dist) {
       best = c;
     }
     lastProgress = c.progress;
   }
-  passes.push(best.progress);
+  passes.push(best);
   return passes;
 }
 
@@ -288,8 +292,16 @@ export function optimizeStops(
         return !(n.includes("tesla") && !n.includes("non-tesla"));
       });
 
+  // Each pass carries its own detour distance — a charger can be on-route
+  // outbound but miles off-route on the return leg
   const withProgress = usable
-    .flatMap((s) => routePasses(s.coords, routeCoords, CORRIDOR_MILES).map((progress) => ({ ...s, progress })))
+    .flatMap((s) =>
+      routePasses(s.coords, routeCoords, CORRIDOR_MILES).map((p) => ({
+        ...s,
+        progress: p.progress,
+        distanceFromRouteMiles: p.dist,
+      }))
+    )
     .sort((a, b) => a.progress - b.progress);
 
   let currentKwh = (startingSoC / 100) * fullBattery;
@@ -360,11 +372,19 @@ export function optimizeStops(
       kwhForDest <= MAX_CHARGE_SOC * fullBattery ? kwhForDest : CHARGE_TO_SOC * fullBattery;
     const kwhAdded = Math.max(0, chargeTarget - arrivalKwh);
 
-    // Skip micro top-ups only when they don't finish the trip (i.e. we're
-    // pinned at the 80% cap and can't make real progress). A small charge
-    // that meets the arrival requirement is still worth a stop.
+    // Tiny/zero charge here usually means we arrived still near the 80% cap
+    // (e.g. high starting charge). Coast forward past this station and keep
+    // planning instead of abandoning the trip; only give up when no charge
+    // is possible at a low battery (genuine dead end).
     const finishesTrip = kwhForDest <= MAX_CHARGE_SOC * fullBattery;
-    if (kwhAdded <= (finishesTrip ? 0.1 : 3)) break;
+    if (kwhAdded <= (finishesTrip ? 0.1 : 3)) {
+      if (arrivalKwh > CHARGE_TO_SOC * fullBattery - 3) {
+        currentKwh = arrivalKwh;
+        currentProgress = bestStop.progress;
+        continue;
+      }
+      break;
+    }
 
     const departureSoC = ((arrivalKwh + kwhAdded) / fullBattery) * 100;
     const effectiveChargekW = Math.min(bestStop.maxPowerKw, ev.maxChargekW) * 0.85;
