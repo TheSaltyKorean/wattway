@@ -320,8 +320,10 @@ export function optimizeStops(
     // Charge just enough to finish the trip (plus a small pad). Normally cap at
     // 80% (charging tapers hard above), but if going a bit past 80% at this stop
     // finishes the trip, do that instead of adding another stop.
+    // Includes the return leg from an off-route station back to the route.
     const kwhForDest =
-      ((1 - bestStop.progress) * routeDistanceMiles) / ev.efficiencyMilesPerKwh +
+      ((1 - bestStop.progress) * routeDistanceMiles + bestStop.distanceFromRouteMiles) /
+        ev.efficiencyMilesPerKwh +
       ((targetArrivalSoC / 100) + ARRIVAL_PAD_SOC) * fullBattery;
     const chargeTarget =
       kwhForDest <= MAX_CHARGE_SOC * fullBattery ? kwhForDest : CHARGE_TO_SOC * fullBattery;
@@ -353,7 +355,8 @@ export function optimizeStops(
       legDistanceMiles: Math.round((bestStop.progress - currentProgress) * routeDistanceMiles),
     });
 
-    currentKwh = arrivalKwh + kwhAdded;
+    // Departure charge minus the drive back from the station to the route
+    currentKwh = arrivalKwh + kwhAdded - bestStop.distanceFromRouteMiles / ev.efficiencyMilesPerKwh;
     currentProgress = bestStop.progress;
   }
 

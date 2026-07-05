@@ -25,30 +25,31 @@ export default function Home() {
 
   const [membershipIds, setMembershipIds] = useState<string[]>([]);
 
-  // Remember the user's car and memberships across visits
+  // Remember the user's car and memberships across visits.
+  // Storage can throw in restricted contexts — persistence is best-effort.
   useEffect(() => {
-    const savedId = localStorage.getItem("wattway.evId");
-    if (savedId) {
-      const saved = getEVById(savedId);
-      if (saved) setEV(saved);
-    }
-    const savedMemberships = localStorage.getItem("wattway.memberships");
-    if (savedMemberships) {
-      try {
+    try {
+      const savedId = localStorage.getItem("wattway.evId");
+      if (savedId) {
+        const saved = getEVById(savedId);
+        if (saved) setEV(saved);
+      }
+      const savedMemberships = localStorage.getItem("wattway.memberships");
+      if (savedMemberships) {
         const ids = JSON.parse(savedMemberships);
         if (Array.isArray(ids)) setMembershipIds(ids.filter((id) => getMembershipById(id)));
-      } catch { /* ignore corrupt state */ }
-    }
+      }
+    } catch { /* storage unavailable or corrupt — run without persistence */ }
   }, []);
 
   const handleEVChange = useCallback((model: EVModel) => {
     setEV(model);
-    localStorage.setItem("wattway.evId", model.id);
+    try { localStorage.setItem("wattway.evId", model.id); } catch { /* best-effort */ }
   }, []);
 
   const handleMembershipsChange = useCallback((ids: string[]) => {
     setMembershipIds(ids);
-    localStorage.setItem("wattway.memberships", JSON.stringify(ids));
+    try { localStorage.setItem("wattway.memberships", JSON.stringify(ids)); } catch { /* best-effort */ }
   }, []);
   const [startingSoC, setStartingSoC] = useState(80);
   const [arrivalSoC, setArrivalSoC] = useState(10);

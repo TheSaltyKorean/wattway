@@ -164,10 +164,21 @@ export default function ChargingPlan({ plan, startingSoC, destinationAddress }: 
       {/* Stops */}
       {plan.stops.length === 0 ? (
         <div className="text-center py-8 text-[var(--text-muted)] text-sm">
-          <p>✅ No charging stops needed!</p>
-          <p className="text-xs mt-1">
-            You can complete this trip on your current charge.
-          </p>
+          {plan.planIncomplete ? (
+            <>
+              <p>⚠️ No usable fast chargers found in range.</p>
+              <p className="text-xs mt-1">
+                This trip can&apos;t reach your arrival target as planned.
+              </p>
+            </>
+          ) : (
+            <>
+              <p>✅ No charging stops needed!</p>
+              <p className="text-xs mt-1">
+                You can complete this trip on your current charge.
+              </p>
+            </>
+          )}
         </div>
       ) : (
         <div className="space-y-3">

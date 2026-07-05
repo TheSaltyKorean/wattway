@@ -173,12 +173,14 @@ export default function TripForm({
 
       <GeocoderInput label="To" value={destination} onChange={onDestinationChange} placeholder="Destination city or address" />
 
-      <button
-        onClick={addVia}
-        className="text-xs text-[var(--accent)] hover:opacity-80 transition-opacity font-medium"
-      >
-        + Add stop
-      </button>
+      {vias.length < 10 && (
+        <button
+          onClick={addVia}
+          className="text-xs text-[var(--accent)] hover:opacity-80 transition-opacity font-medium"
+        >
+          + Add stop
+        </button>
+      )}
 
       <div className="space-y-2">
         <div className="flex justify-between items-center">
