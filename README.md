@@ -69,17 +69,12 @@ npm run dev
 
 Open [http://localhost:3000](http://localhost:3000).
 
-### 4. Deploy (Docker)
+### 4. Deploy (GitHub Pages)
 
-```bash
-docker build \
-  --build-arg NEXT_PUBLIC_GOOGLE_MAPS_KEY=<key> \
-  --build-arg NEXT_PUBLIC_OCM_API_KEY=<key> \
-  -t wattway .
-docker run -d --name wattway --restart unless-stopped -p 3100:3000 wattway
-```
-
-Keys are baked in at build time (`NEXT_PUBLIC_` semantics) — rebuild the image to change them. Add each serving origin (`http://<host>:3100/*`) to the Google key's referrer allowlist.
+Push to `main` — `.github/workflows/pages.yml` builds the static export and
+publishes it. Keys come from the `GOOGLE_MAPS_KEY` / `OCM_API_KEY` Actions
+secrets and are inlined at build time (`NEXT_PUBLIC_` semantics). Add each
+serving origin to the Google key's referrer allowlist.
 
 ## Default network prices ($/kWh, 2026 non-member rates)
 
@@ -102,10 +97,10 @@ Real prices vary by site, time of day, and state. Published OCM rates override t
 
 ## Architecture notes
 
-- 100% client-side (no server code) — Next.js 14, App Router, Tailwind; all API calls happen in the browser
+- 100% client-side (no server code) — Next.js 15, App Router, Tailwind; all API calls happen in the browser
 - Google Maps JS via the v2 functional loader (`setOptions`/`importLibrary`); address search via `PlaceAutocompleteElement` (`gmp-select`)
 - Route line drawn from Routes API polyline directly (no extra Directions call)
-- Docker image is a multi-stage `standalone` build (`node:20-alpine`)
+- Deployed as a static export to GitHub Pages; no server to run or patch
 
 ## Roadmap
 

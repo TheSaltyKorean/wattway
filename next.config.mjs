@@ -1,10 +1,9 @@
-// GITHUB_PAGES=true builds a static export served under /wattway;
-// default is the standalone server build used by the Docker image.
+// GITHUB_PAGES=true builds the static export served under /wattway
 const isPagesBuild = process.env.GITHUB_PAGES === "true";
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  output: isPagesBuild ? "export" : "standalone",
+  output: isPagesBuild ? "export" : undefined,
   basePath: isPagesBuild ? "/wattway" : undefined,
 };
 

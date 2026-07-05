@@ -27,13 +27,11 @@ The loop:
 
 - Local dev: `npm run dev` (keys from `.env.local`; never commit keys).
 - Type-check with `npx tsc --noEmit` and build before every deploy.
-- Docker (p50): multi-stage build; keys are baked in via `--build-arg
-  NEXT_PUBLIC_GOOGLE_MAPS_KEY / NEXT_PUBLIC_OCM_API_KEY`; container `wattway`
-  on port 3100.
-- Public site: GitHub Pages via `.github/workflows/pages.yml`, auto-deploys on
-  push to `main`; keys come from Actions secrets `GOOGLE_MAPS_KEY` and
-  `OCM_API_KEY` (note: NOT prefixed) and are inlined into the public bundle
-  by design — the Google key's HTTP-referrer restriction is the protection.
+- Public site (the only deployment): GitHub Pages via
+  `.github/workflows/pages.yml`, auto-deploys on push to `main`; keys come
+  from Actions secrets `GOOGLE_MAPS_KEY` and `OCM_API_KEY` (note: NOT
+  prefixed) and are inlined into the public bundle by design — the Google
+  key's HTTP-referrer restriction is the protection. No Docker; no servers.
 
 ## Hard-won facts (do not re-litigate)
 

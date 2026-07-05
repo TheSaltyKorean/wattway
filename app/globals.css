@@ -19,24 +19,8 @@ body {
   font-family: system-ui, -apple-system, sans-serif;
 }
 
-.mapboxgl-popup-content {
-  background: var(--surface-2) !important;
-  color: var(--text) !important;
-  border: 1px solid var(--border) !important;
-  border-radius: 8px !important;
-  padding: 12px !important;
-  font-size: 13px !important;
-}
 
-.mapboxgl-ctrl-group {
-  background: var(--surface-2) !important;
-  border: 1px solid var(--border) !important;
-}
 
-.mapboxgl-ctrl button {
-  background-color: var(--surface-2) !important;
-  color: var(--text) !important;
-}
 
 /* Neon donate button — intentionally attention-grabbing */
 @keyframes neon-glow {
