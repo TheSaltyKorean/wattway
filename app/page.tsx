@@ -132,10 +132,13 @@ export default function Home() {
 
   const canPlan = origin && destination && !loading;
 
+  // Single persistent panel element moved via CSS (order / fixed positioning)
+  // so TripForm never remounts — remounting would blank the uncontrolled
+  // Google autocomplete widgets even though the trip state survives.
   const panelClass =
     panelMode === "floating"
       ? "fixed z-20 w-[24rem] max-h-[88vh] flex flex-col bg-[var(--surface)] border border-[var(--border)] rounded-2xl shadow-2xl overflow-hidden"
-      : `w-full max-w-sm flex flex-col bg-[var(--surface)] overflow-hidden ${panelMode === "left" ? "border-r" : "border-l"} border-[var(--border)]`;
+      : `w-full max-w-sm flex flex-col bg-[var(--surface)] overflow-hidden ${panelMode === "left" ? "order-1 border-r" : "order-3 border-l"} border-[var(--border)]`;
 
   const panel = (
     <div
@@ -252,12 +255,10 @@ export default function Home() {
 
   return (
     <div className="flex h-screen overflow-hidden relative">
-      {panelMode === "left" && panel}
-      <div className="flex-1 relative">
+      {panel}
+      <div className="order-2 flex-1 relative">
         <MapView plan={plan} />
       </div>
-      {panelMode === "right" && panel}
-      {panelMode === "floating" && panel}
     </div>
   );
 }
