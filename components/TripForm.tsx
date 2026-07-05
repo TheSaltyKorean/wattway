@@ -140,7 +140,9 @@ export default function TripForm({
 
   return (
     <div className="space-y-4">
-      <div className="relative">
+      {/* Stable keys: vias are inserted between From and To, and the
+          uncontrolled autocomplete widgets blank out if React remounts them */}
+      <div className="relative" key="from">
         <GeocoderInput label="From" value={origin} onChange={onOriginChange} placeholder="Starting city or address" />
         <button
           onClick={useCurrentLocation}
@@ -171,7 +173,9 @@ export default function TripForm({
         </div>
       ))}
 
-      <GeocoderInput label="To" value={destination} onChange={onDestinationChange} placeholder="Destination city or address" />
+      <div key="to">
+        <GeocoderInput label="To" value={destination} onChange={onDestinationChange} placeholder="Destination city or address" />
+      </div>
 
       {vias.length < 10 && (
         <button

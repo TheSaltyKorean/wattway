@@ -241,7 +241,10 @@ const SLOW_CHARGER_PENALTY = 0.10; // $/kWh-equivalent penalty for <150 kW stati
 const LOW_ARRIVAL_PENALTY = 0.15; // $/kWh-equivalent penalty for arriving under 15%
 const ARRIVAL_PAD_SOC = 0.03;
 const MAX_CHARGE_SOC = 0.95;
-const MAX_STOPS = 10;
+// Runaway-loop protection only — real infeasibility is detected by
+// exhausting reachable stations. Low-range EVs on multi-thousand-mile
+// trips can legitimately need 15+ stops.
+const MAX_STOPS = 50;
 
 export function optimizeStops(
   routeCoords: Coordinates[],
