@@ -1,5 +1,5 @@
 "use client";
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import dynamic from "next/dynamic";
 import { EVModel, TripPlan, Waypoint } from "@/lib/types";
 import { EV_DATABASE, DEFAULT_NETWORK_PRICES, getEVById } from "@/lib/evDatabase";
@@ -16,6 +16,8 @@ export interface ViaStop {
   id: number;
   wp: Waypoint | null;
 }
+
+type PanelMode = "left" | "right" | "floating";
 
 export default function Home() {
   const [origin, setOrigin] = useState<Waypoint | null>(null);
@@ -39,6 +41,17 @@ export default function Home() {
         const ids = JSON.parse(savedMemberships);
         if (Array.isArray(ids)) setMembershipIds(ids.filter((id) => getMembershipById(id)));
       }
+      const savedPanel = localStorage.getItem("wattway.panel");
+      if (savedPanel) {
+        const p = JSON.parse(savedPanel);
+        if (p.mode === "left" || p.mode === "right" || p.mode === "floating") setPanelMode(p.mode);
+        if (typeof p.x === "number" && typeof p.y === "number") {
+          setPanelPos({
+            x: Math.min(Math.max(0, p.x), window.innerWidth - 200),
+            y: Math.min(Math.max(0, p.y), window.innerHeight - 100),
+          });
+        }
+      }
     } catch { /* storage unavailable or corrupt — run without persistence */ }
   }, []);
 
@@ -56,6 +69,41 @@ export default function Home() {
   const [plan, setPlan] = useState<TripPlan | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Panel docking: right (default), left, or floating with a saved position
+  const [panelMode, setPanelMode] = useState<PanelMode>("right");
+  const [panelPos, setPanelPos] = useState({ x: 80, y: 60 });
+  const panelPosRef = useRef(panelPos);
+  panelPosRef.current = panelPos;
+
+  const savePanel = useCallback((mode: PanelMode, pos: { x: number; y: number }) => {
+    try { localStorage.setItem("wattway.panel", JSON.stringify({ mode, ...pos })); } catch { /* best-effort */ }
+  }, []);
+
+  const handlePanelMode = useCallback((mode: PanelMode) => {
+    setPanelMode(mode);
+    savePanel(mode, panelPosRef.current);
+  }, [savePanel]);
+
+  const startPanelDrag = useCallback((e: React.PointerEvent) => {
+    if (e.button !== 0) return;
+    e.preventDefault();
+    const start = { x: e.clientX, y: e.clientY };
+    const origin = { ...panelPosRef.current };
+    const onMove = (ev: PointerEvent) => {
+      setPanelPos({
+        x: Math.min(Math.max(0, origin.x + ev.clientX - start.x), window.innerWidth - 200),
+        y: Math.min(Math.max(0, origin.y + ev.clientY - start.y), window.innerHeight - 80),
+      });
+    };
+    const onUp = () => {
+      window.removeEventListener("pointermove", onMove);
+      window.removeEventListener("pointerup", onUp);
+      savePanel("floating", panelPosRef.current);
+    };
+    window.addEventListener("pointermove", onMove);
+    window.addEventListener("pointerup", onUp);
+  }, [savePanel]);
 
   const handlePlan = useCallback(async () => {
     if (!origin || !destination) return;
@@ -84,15 +132,37 @@ export default function Home() {
 
   const canPlan = origin && destination && !loading;
 
-  return (
-    <div className="flex h-screen overflow-hidden">
-      {/* Sidebar */}
-      <div className="w-full max-w-sm flex flex-col bg-[var(--surface)] border-r border-[var(--border)] overflow-hidden">
-        {/* Header */}
-        <div className="px-5 py-4 border-b border-[var(--border)] shrink-0">
+  const panelClass =
+    panelMode === "floating"
+      ? "fixed z-20 w-[24rem] max-h-[88vh] flex flex-col bg-[var(--surface)] border border-[var(--border)] rounded-2xl shadow-2xl overflow-hidden"
+      : `w-full max-w-sm flex flex-col bg-[var(--surface)] overflow-hidden ${panelMode === "left" ? "border-r" : "border-l"} border-[var(--border)]`;
+
+  const panel = (
+    <div
+      className={panelClass}
+      style={panelMode === "floating" ? { left: panelPos.x, top: panelPos.y } : undefined}
+    >
+      {/* Header — drag handle when floating */}
+      <div
+        className={`px-5 py-4 border-b border-[var(--border)] shrink-0 ${panelMode === "floating" ? "cursor-move select-none" : ""}`}
+        onPointerDown={panelMode === "floating" ? startPanelDrag : undefined}
+      >
           <div className="flex items-center gap-2">
             <span className="text-xl">⚡</span>
             <h1 className="text-lg font-bold text-[var(--text)]">WattWay</h1>
+            <div className="ml-auto flex items-center gap-1">
+              {([["left", "◧", "Dock left"], ["floating", "❐", "Float (drag by header)"], ["right", "◨", "Dock right"]] as const).map(([mode, icon, label]) => (
+                <button
+                  key={mode}
+                  title={label}
+                  onPointerDown={(e) => e.stopPropagation()}
+                  onClick={() => handlePanelMode(mode)}
+                  className={`px-1.5 py-0.5 rounded text-sm transition-colors ${panelMode === mode ? "text-[var(--accent)]" : "text-[var(--text-muted)] hover:text-[var(--text)]"}`}
+                >
+                  {icon}
+                </button>
+              ))}
+            </div>
           </div>
           <p className="text-xs text-[var(--text-muted)] mt-0.5">
             Cost-optimized EV trip planner
@@ -177,12 +247,17 @@ export default function Home() {
           )}
         </div>
         </div>
-      </div>
+    </div>
+  );
 
-      {/* Map */}
+  return (
+    <div className="flex h-screen overflow-hidden relative">
+      {panelMode === "left" && panel}
       <div className="flex-1 relative">
         <MapView plan={plan} />
       </div>
+      {panelMode === "right" && panel}
+      {panelMode === "floating" && panel}
     </div>
   );
 }
