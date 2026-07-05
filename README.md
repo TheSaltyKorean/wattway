@@ -46,6 +46,8 @@ Keys live in `.env` (committed — this repo is private) and can be overridden i
   (the classic Directions/Places APIs are legacy — new projects can't use them)
 - The project must be linked to an **active billing account**; per-SKU free tiers (~10k calls/month) cover personal use
 - Restrict the key: *Websites* → your origins (e.g. `http://localhost:3100/*`); *APIs* → the three above
+- Note: unlike the legacy Directions web service, the Routes API accepts browser calls with
+  website-restricted keys — this setup is intentional and verified working end to end
 
 **Open Charge Map** (`NEXT_PUBLIC_OCM_API_KEY`) — [openchargemap.org](https://openchargemap.org/site/develop/api)
 - **Required** (anonymous access was discontinued); free signup

@@ -5,8 +5,9 @@ export const metadata: Metadata = {
   title: "WattWay — Cost-Optimized EV Trip Planner",
   description:
     "Plan your EV road trip with the cheapest possible charging stops. WattWay finds the optimal charging sequence so you spend less time and money on the road.",
-  icons: { icon: "/icon-192.png", apple: "/icon-192.png" },
-  manifest: "/manifest.json",
+  // Relative URLs so they resolve under a base path (e.g. GitHub Pages /wattway)
+  icons: { icon: "icon-192.png", apple: "icon-192.png" },
+  manifest: "manifest.json",
   appleWebApp: { capable: true, statusBarStyle: "black-translucent", title: "WattWay" },
 };
 

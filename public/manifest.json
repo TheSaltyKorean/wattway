@@ -1,14 +1,29 @@
 {
-  "name": "WattWay — EV Trip Planner",
+  "name": "WattWay \u2014 EV Trip Planner",
   "short_name": "WattWay",
   "description": "Cost-optimized EV trip planner with smart charging stops",
-  "start_url": "/",
+  "start_url": ".",
   "display": "standalone",
   "background_color": "#0a0e14",
   "theme_color": "#0a0e14",
   "icons": [
-    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
-    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
-    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
   ]
 }
