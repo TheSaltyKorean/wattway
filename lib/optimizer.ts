@@ -379,7 +379,10 @@ export function optimizeStops(
     const finishesTrip = kwhForDest <= MAX_CHARGE_SOC * fullBattery;
     if (kwhAdded <= (finishesTrip ? 0.1 : 3)) {
       if (arrivalKwh > CHARGE_TO_SOC * fullBattery - 3) {
-        currentKwh = arrivalKwh;
+        // Coasting past: we never leave the route, so spend only the
+        // on-route miles (no detour to a station we don't visit)
+        const onRouteMiles = (bestStop.progress - currentProgress) * routeDistanceMiles;
+        currentKwh -= onRouteMiles / ev.efficiencyMilesPerKwh;
         currentProgress = bestStop.progress;
         continue;
       }
