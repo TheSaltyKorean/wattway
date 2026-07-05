@@ -160,38 +160,62 @@ export async function getRoute(
   };
 }
 
+// Long routes are queried in overlapping segments — a single query centered on
+// the route midpoint hits OCM's result cap and starves the route's endpoints.
+const SEGMENT_MILES = 120;
+const SEGMENT_RADIUS_MILES = 90;
+const SEGMENT_PARALLELISM = 4;
+
 export async function fetchChargersAlongRoute(
   routeCoords: Coordinates[],
   networkPrices: Record<string, number>,
   memberships: MembershipPlan[],
   ocmApiKey?: string
 ): Promise<ChargerStation[]> {
-  const lats = routeCoords.map((c) => c.lat);
-  const lngs = routeCoords.map((c) => c.lng);
-  const bufferDeg = CORRIDOR_MILES / 69;
-  const minLat = Math.min(...lats) - bufferDeg;
-  const maxLat = Math.max(...lats) + bufferDeg;
-  const minLng = Math.min(...lngs) - bufferDeg;
-  const maxLng = Math.max(...lngs) + bufferDeg;
+  // Sample query centers every SEGMENT_MILES along the route
+  const samples: Coordinates[] = [routeCoords[0]];
+  let acc = 0;
+  for (let i = 0; i < routeCoords.length - 1; i++) {
+    acc += haversine(routeCoords[i], routeCoords[i + 1]);
+    if (acc >= SEGMENT_MILES) {
+      samples.push(routeCoords[i + 1]);
+      acc = 0;
+    }
+  }
+  samples.push(routeCoords[routeCoords.length - 1]);
 
-  const params = new URLSearchParams({
-    output: "json",
-    levelid: "3",
-    maxresults: "2000",
-    compact: "false",
-    verbose: "false",
-    latitude: String((minLat + maxLat) / 2),
-    longitude: String((minLng + maxLng) / 2),
-    distance: "400",
-    distanceunit: "Miles",
-    boundingbox: `(${minLat},${minLng}),(${maxLat},${maxLng})`,
-    includecomments: "false",
-  });
-  if (ocmApiKey) params.set("key", ocmApiKey);
+  const queryPoint = async (c: Coordinates): Promise<unknown[]> => {
+    const params = new URLSearchParams({
+      output: "json",
+      levelid: "3",
+      maxresults: "1000",
+      compact: "false",
+      verbose: "false",
+      latitude: String(c.lat),
+      longitude: String(c.lng),
+      distance: String(SEGMENT_RADIUS_MILES),
+      distanceunit: "Miles",
+      includecomments: "false",
+    });
+    if (ocmApiKey) params.set("key", ocmApiKey);
+    const res = await fetch(`${OCM_BASE}/poi/?${params}`);
+    if (!res.ok) throw new Error("Open Charge Map API error");
+    return res.json();
+  };
 
-  const res = await fetch(`${OCM_BASE}/poi/?${params}`);
-  if (!res.ok) throw new Error("Open Charge Map API error");
-  const data = await res.json();
+  const seen = new Set<number>();
+  const data: any[] = [];
+  for (let i = 0; i < samples.length; i += SEGMENT_PARALLELISM) {
+    const batch = await Promise.all(samples.slice(i, i + SEGMENT_PARALLELISM).map(queryPoint));
+    for (const list of batch) {
+      for (const poi of list as any[]) {
+        if (!seen.has(poi.ID)) {
+          seen.add(poi.ID);
+          data.push(poi);
+        }
+      }
+    }
+  }
 
   const stations: ChargerStation[] = [];
   for (const poi of data) {

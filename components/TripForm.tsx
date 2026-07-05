@@ -9,13 +9,49 @@ interface GeocoderInputProps {
   value: Waypoint | null;
   onChange: (wp: Waypoint) => void;
   placeholder: string;
+  onRemove?: () => void;
 }
 
-function GeocoderInput({ label, value, onChange, placeholder }: GeocoderInputProps) {
+function GeocoderInput({ label, value, onChange, placeholder, onRemove }: GeocoderInputProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const autocompleteRef = useRef<google.maps.places.PlaceAutocompleteElement | null>(null);
   const onChangeRef = useRef(onChange);
   onChangeRef.current = onChange;
+  const [locState, setLocState] = useState<"idle" | "locating" | "active" | "error">("idle");
+
+  const useCurrentLocation = () => {
+    setLocState("locating");
+    const set = (lat: number, lng: number, label2: string) => {
+      onChangeRef.current({ address: label2, coords: { lat, lng } });
+      setLocState("active");
+    };
+    // Rough city-level fallback for insecure origins (browsers block GPS on
+    // plain http except localhost) or when the user denies the GPS prompt
+    const ipFallback = async () => {
+      try {
+        const res = await fetch("https://ipapi.co/json/");
+        const d = await res.json();
+        if (d.latitude && d.longitude) {
+          set(d.latitude, d.longitude, `Near ${d.city ?? "current location"} (approx.)`);
+        } else setLocState("error");
+      } catch {
+        setLocState("error");
+      }
+    };
+    if (window.isSecureContext && navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => set(pos.coords.latitude, pos.coords.longitude, "Current location"),
+        () => { void ipFallback(); },
+        { enableHighAccuracy: false, timeout: 10000 }
+      );
+    } else {
+      void ipFallback();
+    }
+  };
+
+  const locActive =
+    locState === "active" &&
+    (value?.address === "Current location" || (value?.address ?? "").startsWith("Near "));
 
   useEffect(() => {
     const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_KEY;
@@ -52,9 +88,32 @@ function GeocoderInput({ label, value, onChange, placeholder }: GeocoderInputPro
 
   return (
     <div className="space-y-1">
-      <label className="text-xs font-medium text-[var(--text-muted)] uppercase tracking-wider">
-        {label}
-      </label>
+      <div className="flex items-center justify-between gap-2">
+        <label className="text-xs font-medium text-[var(--text-muted)] uppercase tracking-wider">
+          {label}
+        </label>
+        <span className="flex items-center gap-3">
+          <button
+            onClick={useCurrentLocation}
+            title="Use current location"
+            className="text-xs text-[var(--accent)] hover:opacity-80 transition-opacity"
+          >
+            {locState === "locating" ? "locating…"
+              : locActive ? `📍 ${value?.address}`
+              : locState === "error" ? "location unavailable"
+              : "📍 current location"}
+          </button>
+          {onRemove && (
+            <button
+              onClick={onRemove}
+              aria-label={`Remove ${label}`}
+              className="text-xs text-[var(--text-muted)] hover:text-red-400 transition-colors"
+            >
+              ✕
+            </button>
+          )}
+        </span>
+      </div>
       {hasKey ? (
         <div ref={containerRef} className="w-full [&_gmp-place-autocomplete]:w-full" />
       ) : (
@@ -106,70 +165,23 @@ export default function TripForm({
   const setVia = (id: number, wp: Waypoint) =>
     onViasChange(vias.map((v) => (v.id === id ? { ...v, wp } : v)));
 
-  const [locState, setLocState] = useState<"idle" | "locating" | "active" | "error">("idle");
-
-  const useCurrentLocation = () => {
-    setLocState("locating");
-    const setFrom = (lat: number, lng: number, label: string) => {
-      onOriginChange({ address: label, coords: { lat, lng } });
-      setLocState("active");
-    };
-    // Rough city-level fallback for insecure origins (browsers block GPS on
-    // plain http except localhost) or when the user denies the GPS prompt
-    const ipFallback = async () => {
-      try {
-        const res = await fetch("https://ipapi.co/json/");
-        const d = await res.json();
-        if (d.latitude && d.longitude) {
-          setFrom(d.latitude, d.longitude, `Near ${d.city ?? "current location"} (approx.)`);
-        } else setLocState("error");
-      } catch {
-        setLocState("error");
-      }
-    };
-    if (window.isSecureContext && navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        (pos) => setFrom(pos.coords.latitude, pos.coords.longitude, "Current location"),
-        () => { void ipFallback(); },
-        { enableHighAccuracy: false, timeout: 10000 }
-      );
-    } else {
-      void ipFallback();
-    }
-  };
-
   return (
     <div className="space-y-4">
       {/* Stable keys: vias are inserted between From and To, and the
           uncontrolled autocomplete widgets blank out if React remounts them */}
-      <div className="relative" key="from">
+      <div key="from">
         <GeocoderInput label="From" value={origin} onChange={onOriginChange} placeholder="Starting city or address" />
-        <button
-          onClick={useCurrentLocation}
-          className="absolute top-0 right-0 text-xs text-[var(--accent)] hover:opacity-80 transition-opacity"
-        >
-          {locState === "locating" ? "locating…"
-            : locState === "active" ? `📍 ${origin?.address ?? "using current location"}`
-            : locState === "error" ? "location unavailable"
-            : "📍 current location"}
-        </button>
       </div>
 
       {vias.map((via, i) => (
-        <div key={via.id} className="relative">
+        <div key={via.id}>
           <GeocoderInput
             label={`Stop ${i + 1}`}
             value={via.wp}
             onChange={(wp) => setVia(via.id, wp)}
             placeholder="City or address along the way"
+            onRemove={() => removeVia(via.id)}
           />
-          <button
-            onClick={() => removeVia(via.id)}
-            aria-label={`Remove stop ${i + 1}`}
-            className="absolute top-0 right-0 text-xs text-[var(--text-muted)] hover:text-red-400 transition-colors"
-          >
-            ✕ remove
-          </button>
         </div>
       ))}
 
