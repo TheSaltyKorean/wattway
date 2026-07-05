@@ -17,6 +17,11 @@ function networkColor(network: string): string {
   return "bg-gray-800 text-gray-300 border-gray-700";
 }
 
+// Station/operator URLs come from community-edited OCM data — only render http(s)
+function safeUrl(url: string | null): string | null {
+  return url && /^https?:\/\//i.test(url) ? url : null;
+}
+
 function SoCBar({ value }: { value: number }) {
   const color = value > 50 ? "#4ade80" : value > 20 ? "#facc15" : "#ef4444";
   return (
@@ -100,16 +105,19 @@ function StopCard({ stop, index }: { stop: ChargingStop; index: number }) {
         >
           Google reviews ↗
         </a>
-        {(stop.station.stationUrl || stop.station.operatorUrl) && (
-          <a
-            href={(stop.station.stationUrl || stop.station.operatorUrl)!}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-[var(--accent)] hover:underline"
-          >
-            {stop.station.stationUrl ? "Station site ↗" : "Operator site ↗"}
-          </a>
-        )}
+        {(() => {
+          const url = safeUrl(stop.station.stationUrl) ?? safeUrl(stop.station.operatorUrl);
+          return url ? (
+            <a
+              href={url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-[var(--accent)] hover:underline"
+            >
+              {safeUrl(stop.station.stationUrl) ? "Station site ↗" : "Operator site ↗"}
+            </a>
+          ) : null;
+        })()}
       </div>
     </div>
   );
@@ -199,6 +207,12 @@ export default function ChargingPlan({ plan, startingSoC, destinationAddress }: 
           <p className="text-xs text-[var(--text-muted)]">Arrive with</p>
           <SoCBar value={plan.arrivalSoC} />
         </div>
+        {plan.planIncomplete && (
+          <p className="text-xs text-amber-400 bg-amber-900/20 border border-amber-800 rounded-lg px-3 py-2">
+            ⚠️ Couldn&apos;t meet your arrival charge target — not enough fast chargers
+            found along part of this route. Arrival estimate above is best-effort.
+          </p>
+        )}
       </div>
     </div>
   );

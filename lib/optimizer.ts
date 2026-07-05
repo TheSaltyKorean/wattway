@@ -248,14 +248,20 @@ export function optimizeStops(
   routeDistanceMiles: number,
   stations: ChargerStation[],
   input: TripInput
-): { stops: ChargingStop[]; arrivalSoC: number; finalLegMiles: number } {
+): { stops: ChargingStop[]; arrivalSoC: number; finalLegMiles: number; planIncomplete: boolean } {
   const { ev, startingSoC, targetArrivalSoC } = input;
   const fullBattery = ev.batteryKwh;
 
-  // Tesla-only Superchargers (OCM labels them explicitly) are unusable by other makes
+  // Tesla-operated sites are unusable by other makes unless OCM explicitly
+  // marks them open ("Tesla (including non-tesla)"). Plain "Tesla" operators
+  // are assumed Tesla-only. Stations merely *named* "...Supercharger" under a
+  // non-Tesla operator (e.g. Buc-ee's hosts) are left in.
   const usable = ev.make === "Tesla"
     ? stations
-    : stations.filter((s) => !s.network.toLowerCase().includes("tesla-only"));
+    : stations.filter((s) => {
+        const n = s.network.toLowerCase();
+        return !(n.includes("tesla") && !n.includes("non-tesla"));
+      });
 
   const withProgress = usable
     .map((s) => ({ ...s, progress: routeProgress(s.coords, routeCoords) }))
@@ -321,7 +327,11 @@ export function optimizeStops(
       kwhForDest <= MAX_CHARGE_SOC * fullBattery ? kwhForDest : CHARGE_TO_SOC * fullBattery;
     const kwhAdded = Math.max(0, chargeTarget - arrivalKwh);
 
-    if (kwhAdded <= 3) break; // a micro top-up stop isn't worth it
+    // Skip micro top-ups only when they don't finish the trip (i.e. we're
+    // pinned at the 80% cap and can't make real progress). A small charge
+    // that meets the arrival requirement is still worth a stop.
+    const finishesTrip = kwhForDest <= MAX_CHARGE_SOC * fullBattery;
+    if (kwhAdded <= (finishesTrip ? 0.1 : 3)) break;
 
     const departureSoC = ((arrivalKwh + kwhAdded) / fullBattery) * 100;
     const effectiveChargekW = Math.min(bestStop.maxPowerKw, ev.maxChargekW) * 0.85;
@@ -348,11 +358,13 @@ export function optimizeStops(
   }
 
   const finalRemainingMiles = (1 - currentProgress) * routeDistanceMiles;
-  const arrivalSoC = Math.round(
-    Math.max(0, ((currentKwh - finalRemainingMiles / ev.efficiencyMilesPerKwh) / fullBattery) * 100)
-  );
+  const finalKwh = currentKwh - finalRemainingMiles / ev.efficiencyMilesPerKwh;
+  const arrivalSoC = Math.round(Math.max(0, (finalKwh / fullBattery) * 100));
+  // Flag plans that end below the requested arrival SoC (charger gaps or the
+  // stop cap) instead of presenting them as complete.
+  const planIncomplete = finalKwh < ((targetArrivalSoC / 100) - 0.01) * fullBattery;
 
-  return { stops, arrivalSoC, finalLegMiles: Math.round(finalRemainingMiles) };
+  return { stops, arrivalSoC, finalLegMiles: Math.round(finalRemainingMiles), planIncomplete };
 }
 
 export async function planTrip(input: TripInput): Promise<TripPlan> {
@@ -371,12 +383,13 @@ export async function planTrip(input: TripInput): Promise<TripPlan> {
   );
 
   const stations = await fetchChargersAlongRoute(routeCoords, input.networkPrices, input.memberships ?? [], ocmKey);
-  const { stops, arrivalSoC, finalLegMiles } = optimizeStops(routeCoords, distanceMiles, stations, input);
+  const { stops, arrivalSoC, finalLegMiles, planIncomplete } = optimizeStops(routeCoords, distanceMiles, stations, input);
 
   return {
     stops,
     arrivalSoC,
     finalLegMiles,
+    planIncomplete,
     totalEnergyCostUsd: Math.round(stops.reduce((s, stop) => s + stop.energyCostUsd, 0) * 100) / 100,
     totalChargeTimeMinutes: stops.reduce((s, stop) => s + stop.chargeTimeMinutes, 0),
     totalDetourMiles: Math.round(stops.reduce((s, stop) => s + stop.detourMiles, 0) * 10) / 10,

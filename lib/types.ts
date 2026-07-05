@@ -54,6 +54,7 @@ export interface TripPlan {
   stops: ChargingStop[];
   arrivalSoC: number;
   finalLegMiles: number;
+  planIncomplete: boolean;
   totalEnergyCostUsd: number;
   totalChargeTimeMinutes: number;
   totalDetourMiles: number;
