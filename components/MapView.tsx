@@ -100,22 +100,43 @@ export default function MapView({ plan }: Props) {
           });
 
           pin.addEventListener("click", () => {
-            const infoWin = new google.maps.InfoWindow({
-              content: `
-                <div style="min-width:200px;font-family:system-ui,sans-serif;font-size:13px">
-                  <p style="font-weight:600;margin:0 0 4px">${stop.station.name}</p>
-                  <p style="margin:0 0 2px;opacity:0.7">${stop.station.network}${stop.station.priceIsPublished ? " ✓" : ""}</p>
-                  <p style="margin:0 0 8px;opacity:0.6;font-size:11px">${stop.station.address}</p>
-                  <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
-                    <div><span style="opacity:0.6">Rate</span><br><b>$${stop.station.pricePerKwh.toFixed(2)}/kWh${stop.station.priceIsPublished ? "" : "*"}</b></div>
-                    <div><span style="opacity:0.6">Cost</span><br><b>$${stop.energyCostUsd.toFixed(2)}</b></div>
-                    <div><span style="opacity:0.6">Energy</span><br><b>${stop.kwhAdded} kWh</b></div>
-                    <div><span style="opacity:0.6">Time</span><br><b>${stop.chargeTimeMinutes} min</b></div>
-                  </div>
-                  ${!stop.station.priceIsPublished ? '<p style="margin:8px 0 0;opacity:0.5;font-size:11px">* estimated rate</p>' : ''}
-                </div>
-              `,
-            });
+            // Build the InfoWindow via DOM with textContent — OCM name/network/
+            // address are community-editable, and InfoWindow string content is
+            // parsed as HTML (an onerror payload would otherwise execute).
+            const el = (tag: string, css: string, text?: string) => {
+              const n = document.createElement(tag);
+              n.style.cssText = css;
+              if (text !== undefined) n.textContent = text;
+              return n;
+            };
+            const stat = (labelText: string, valueText: string) => {
+              const d = document.createElement("div");
+              const l = el("span", "opacity:0.6", labelText);
+              const b = document.createElement("b");
+              b.textContent = valueText;
+              d.append(l, document.createElement("br"), b);
+              return d;
+            };
+
+            const root = el("div", "min-width:200px;font-family:system-ui,sans-serif;font-size:13px");
+            root.append(
+              el("p", "font-weight:600;margin:0 0 4px", stop.station.name),
+              el("p", "margin:0 0 2px;opacity:0.7", stop.station.network + (stop.station.priceIsPublished ? " ✓" : "")),
+              el("p", "margin:0 0 8px;opacity:0.6;font-size:11px", stop.station.address),
+            );
+            const grid = el("div", "display:grid;grid-template-columns:1fr 1fr;gap:6px");
+            grid.append(
+              stat("Rate", `$${stop.station.pricePerKwh.toFixed(2)}/kWh${stop.station.priceIsPublished ? "" : "*"}`),
+              stat("Cost", `$${stop.energyCostUsd.toFixed(2)}`),
+              stat("Energy", `${stop.kwhAdded} kWh`),
+              stat("Time", `${stop.chargeTimeMinutes} min`),
+            );
+            root.append(grid);
+            if (!stop.station.priceIsPublished) {
+              root.append(el("p", "margin:8px 0 0;opacity:0.5;font-size:11px", "* estimated rate"));
+            }
+
+            const infoWin = new google.maps.InfoWindow({ content: root });
             infoWin.open({ anchor: marker, map });
           });
 
