@@ -37,3 +37,18 @@ body {
   background-color: var(--surface-2) !important;
   color: var(--text) !important;
 }
+
+/* Neon donate button — intentionally attention-grabbing */
+@keyframes neon-glow {
+  0%, 100% {
+    box-shadow: 0 0 6px #00b2ff, 0 0 16px rgba(0, 178, 255, 0.55);
+  }
+  50% {
+    box-shadow: 0 0 16px #00b2ff, 0 0 40px rgba(0, 178, 255, 0.95);
+  }
+}
+
+.neon-donate {
+  background: #008cff;
+  animation: neon-glow 1.6s ease-in-out infinite;
+}

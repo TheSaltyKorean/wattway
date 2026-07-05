@@ -7,7 +7,7 @@ import type { ViaStop } from "@/app/page";
 interface GeocoderInputProps {
   label: string;
   value: Waypoint | null;
-  onChange: (wp: Waypoint) => void;
+  onChange: (wp: Waypoint | null) => void;
   placeholder: string;
   onRemove?: () => void;
   /** Increment to force the field to display `value` as a filled box —
@@ -37,6 +37,9 @@ function GeocoderInput({ label, value, onChange, placeholder, onRemove, fillSign
   // When set, the box shows the resolved address instead of the autocomplete
   // (which has no API for setting its text). The widget stays mounted, hidden.
   const [locApplied, setLocApplied] = useState(false);
+  // Monotonic token: any manual selection or newer lookup invalidates
+  // still-pending location lookups so they can't overwrite fresher input
+  const locReqRef = useRef(0);
 
   // Programmatic value changes (e.g. swap) also display as a filled box
   const valueRef = useRef(value);
@@ -48,6 +51,8 @@ function GeocoderInput({ label, value, onChange, placeholder, onRemove, fillSign
 
   const useCurrentLocation = () => {
     setLocState("locating");
+    const reqId = ++locReqRef.current;
+    const stale = () => !mountedRef.current || locReqRef.current !== reqId;
     const finish = async (lat: number, lng: number) => {
       // Fill the box with a real address, same as a typed selection
       let address: string | null = null;
@@ -56,7 +61,7 @@ function GeocoderInput({ label, value, onChange, placeholder, onRemove, fillSign
         const res = await new Geocoder().geocode({ location: { lat, lng } });
         address = res.results[0]?.formatted_address ?? null;
       } catch { /* fall through to coordinate label */ }
-      if (!mountedRef.current) return; // field was removed while locating
+      if (stale()) return; // field removed, superseded, or manually edited
       onChangeRef.current({
         address: address ?? `${lat.toFixed(4)}, ${lng.toFixed(4)}`,
         coords: { lat, lng },
@@ -70,11 +75,11 @@ function GeocoderInput({ label, value, onChange, placeholder, onRemove, fillSign
       try {
         const res = await fetch("https://ipapi.co/json/");
         const d = await res.json();
-        if (!mountedRef.current) return;
+        if (stale()) return;
         if (d.latitude && d.longitude) await finish(d.latitude, d.longitude);
         else setLocState("error");
       } catch {
-        if (mountedRef.current) setLocState("error");
+        if (!stale()) setLocState("error");
       }
     };
     if (window.isSecureContext && navigator.geolocation) {
@@ -88,19 +93,17 @@ function GeocoderInput({ label, value, onChange, placeholder, onRemove, fillSign
     }
   };
 
-  useEffect(() => {
-    const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_KEY;
-    if (!apiKey || !containerRef.current) return;
-
-    ensureMapsConfigured(apiKey);
+  // Creating a fresh widget is also the only way to reset its text (used by ✕)
+  const mountAutocomplete = () => {
     importLibrary("places").then(({ PlaceAutocompleteElement }) => {
-      if (autocompleteRef.current || !containerRef.current) return;
+      if (!mountedRef.current || !containerRef.current) return;
       const pac = new PlaceAutocompleteElement({
         includedRegionCodes: ["us"],
       });
       pac.style.width = "100%";
       pac.style.colorScheme = "dark";
       pac.addEventListener("gmp-select", async (event) => {
+        locReqRef.current++; // manual selection supersedes any pending lookup
         const { placePrediction } = event as google.maps.places.PlacePredictionSelectEvent;
         const place = placePrediction.toPlace();
         await place.fetchFields({ fields: ["formattedAddress", "location"] });
@@ -112,12 +115,31 @@ function GeocoderInput({ label, value, onChange, placeholder, onRemove, fillSign
               lng: place.location.lng(),
             },
           });
+          setLocApplied(false);
+          setLocState("idle");
         }
       });
       containerRef.current.replaceChildren(pac);
       autocompleteRef.current = pac;
     });
+  };
+
+  useEffect(() => {
+    const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_KEY;
+    if (!apiKey || !containerRef.current || autocompleteRef.current) return;
+    ensureMapsConfigured(apiKey);
+    mountAutocomplete();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // ✕ on the filled box: truly clear the waypoint and reset the widget text
+  const clearField = () => {
+    locReqRef.current++;
+    setLocApplied(false);
+    setLocState("idle");
+    onChangeRef.current(null);
+    mountAutocomplete(); // fresh widget = empty text
+  };
 
   const hasKey = !!process.env.NEXT_PUBLIC_GOOGLE_MAPS_KEY;
 
@@ -165,7 +187,7 @@ function GeocoderInput({ label, value, onChange, placeholder, onRemove, fillSign
                 {value.address}
               </span>
               <button
-                onClick={() => setLocApplied(false)}
+                onClick={clearField}
                 aria-label="Clear location"
                 className="text-[var(--text-muted)] hover:text-[var(--text)] transition-colors"
               >
@@ -192,8 +214,8 @@ interface TripFormProps {
   vias: ViaStop[];
   startingSoC: number;
   arrivalSoC: number;
-  onOriginChange: (wp: Waypoint) => void;
-  onDestinationChange: (wp: Waypoint) => void;
+  onOriginChange: (wp: Waypoint | null) => void;
+  onDestinationChange: (wp: Waypoint | null) => void;
   onSwap: () => void;
   onViasChange: (vias: ViaStop[]) => void;
   onSoCChange: (soc: number) => void;
@@ -222,7 +244,7 @@ export default function TripForm({
     onViasChange([...vias, { id: nextId, wp: null }]);
   };
   const removeVia = (id: number) => onViasChange(vias.filter((v) => v.id !== id));
-  const setVia = (id: number, wp: Waypoint) =>
+  const setVia = (id: number, wp: Waypoint | null) =>
     onViasChange(vias.map((v) => (v.id === id ? { ...v, wp } : v)));
 
   // Bumped on swap so both fields re-display their (exchanged) values
