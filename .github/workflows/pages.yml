@@ -1,8 +1,8 @@
 name: Deploy to GitHub Pages
 
-# Manual-only until hosting is settled: personal-plan private repos can't
-# use GitHub Pages (422 on site creation).
 on:
+  push:
+    branches: [main]
   workflow_dispatch:
 
 permissions:
@@ -30,6 +30,8 @@ jobs:
       - run: npm run build
         env:
           GITHUB_PAGES: "true"
+          NEXT_PUBLIC_GOOGLE_MAPS_KEY: ${{ secrets.NEXT_PUBLIC_GOOGLE_MAPS_KEY }}
+          NEXT_PUBLIC_OCM_API_KEY: ${{ secrets.NEXT_PUBLIC_OCM_API_KEY }}
       - uses: actions/upload-pages-artifact@v3
         with:
           path: out

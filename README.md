@@ -39,7 +39,7 @@ npm install
 
 ### 2. API keys
 
-Keys live in `.env` (committed — this repo is private) and can be overridden in `.env.local`.
+Keys are NOT committed. For local dev copy `.env.local.example` to `.env.local`; CI builds read them from GitHub Actions secrets (`NEXT_PUBLIC_GOOGLE_MAPS_KEY`, `NEXT_PUBLIC_OCM_API_KEY`).
 
 **Google Maps Platform** (`NEXT_PUBLIC_GOOGLE_MAPS_KEY`) — [console.cloud.google.com](https://console.cloud.google.com/)
 - Enable exactly these APIs: **Maps JavaScript API**, **Routes API**, **Places API (New)**
