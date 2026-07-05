@@ -186,7 +186,8 @@ export default function ChargingPlan({ plan, startingSoC, destinationAddress }: 
             Optimal charging sequence
           </p>
           {plan.stops.map((stop, i) => (
-            <div key={stop.station.id} className="space-y-3">
+            // A round trip can stop at the same station twice — key by index too
+            <div key={`${stop.station.id}-${i}`} className="space-y-3">
               <p className="text-xs text-[var(--text-muted)] text-center tabular-nums">
                 ↓ &nbsp;{stop.legDistanceMiles} mi
               </p>

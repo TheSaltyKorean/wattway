@@ -51,14 +51,23 @@ function minDistanceToRoute(point: Coordinates, routeCoords: Coordinates[]): num
   return minDist;
 }
 
-function routeProgress(point: Coordinates, routeCoords: Coordinates[]): number {
-  let bestT = 0, minDist = Infinity, totalLen = 0, cumLen = 0;
+// A route with via stops can pass the same charger more than once (out-and-back
+// legs, loops). Return one progress value per distinct pass within the corridor,
+// so later passes stay eligible after the plan advances beyond the first one.
+const PASS_SEPARATION_MILES = 25;
+
+function routePasses(point: Coordinates, routeCoords: Coordinates[], corridorMiles: number): number[] {
   const segLens: number[] = [];
+  let totalLen = 0;
   for (let i = 0; i < routeCoords.length - 1; i++) {
     const l = haversine(routeCoords[i], routeCoords[i + 1]);
     segLens.push(l);
     totalLen += l;
   }
+  if (totalLen === 0) return [0];
+
+  const cands: { progress: number; dist: number }[] = [];
+  let cumLen = 0;
   for (let i = 0; i < routeCoords.length - 1; i++) {
     const a = routeCoords[i], b = routeCoords[i + 1];
     const dx = b.lng - a.lng, dy = b.lat - a.lat;
@@ -66,13 +75,26 @@ function routeProgress(point: Coordinates, routeCoords: Coordinates[]): number {
     let t = lenSq === 0 ? 0 : ((point.lng - a.lng) * dx + (point.lat - a.lat) * dy) / lenSq;
     t = Math.max(0, Math.min(1, t));
     const d = haversine(point, { lat: a.lat + t * dy, lng: a.lng + t * dx });
-    if (d < minDist) {
-      minDist = d;
-      bestT = (cumLen + t * segLens[i]) / totalLen;
-    }
+    if (d <= corridorMiles) cands.push({ progress: (cumLen + t * segLens[i]) / totalLen, dist: d });
     cumLen += segLens[i];
   }
-  return bestT;
+  if (cands.length === 0) return [];
+
+  cands.sort((x, y) => x.progress - y.progress);
+  const passes: number[] = [];
+  let best = cands[0];
+  let lastProgress = cands[0].progress;
+  for (const c of cands.slice(1)) {
+    if ((c.progress - lastProgress) * totalLen > PASS_SEPARATION_MILES) {
+      passes.push(best.progress);
+      best = c;
+    } else if (c.dist < best.dist) {
+      best = c;
+    }
+    lastProgress = c.progress;
+  }
+  passes.push(best.progress);
+  return passes;
 }
 
 // Parse OCM's free-text UsageCost field to get $/kWh
@@ -267,7 +289,7 @@ export function optimizeStops(
       });
 
   const withProgress = usable
-    .map((s) => ({ ...s, progress: routeProgress(s.coords, routeCoords) }))
+    .flatMap((s) => routePasses(s.coords, routeCoords, CORRIDOR_MILES).map((progress) => ({ ...s, progress })))
     .sort((a, b) => a.progress - b.progress);
 
   let currentKwh = (startingSoC / 100) * fullBattery;

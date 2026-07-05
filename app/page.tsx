@@ -67,6 +67,9 @@ export default function Home() {
   const [startingSoC, setStartingSoC] = useState(80);
   const [arrivalSoC, setArrivalSoC] = useState(10);
   const [plan, setPlan] = useState<TripPlan | null>(null);
+  // Captured at plan time so the destination card can't be relabeled by
+  // input changes made after the plan was computed
+  const [plannedDestAddress, setPlannedDestAddress] = useState<string | undefined>(undefined);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -123,6 +126,7 @@ export default function Home() {
           .filter((m): m is NonNullable<typeof m> => m !== undefined),
       });
       setPlan(result);
+      setPlannedDestAddress(destination.address);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Something went wrong");
     } finally {
@@ -217,7 +221,7 @@ export default function Home() {
         {/* Results */}
         <div className="px-5 pb-5">
           {plan ? (
-            <ChargingPlan plan={plan} startingSoC={startingSoC} destinationAddress={destination?.address} />
+            <ChargingPlan plan={plan} startingSoC={startingSoC} destinationAddress={plannedDestAddress} />
           ) : (
             !loading && (
               <div className="text-center py-12 text-[var(--text-muted)]">
