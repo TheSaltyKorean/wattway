@@ -216,12 +216,18 @@ export async function fetchChargersAlongRoute(
     const res = await fetch(`${OCM_BASE}/poi/?${params}`);
     if (!res.ok) throw new Error("Open Charge Map API error");
     const list: any[] = await res.json();
-    // Cap hit → the box was too dense; halve the segment and recurse
-    if (list.length >= OCM_CAP && depth < 3 && coords.length >= 3) {
-      const mid = Math.floor(coords.length / 2);
+    // Cap hit → the box was too dense; halve the segment and recurse.
+    // Two-point segments get an interpolated midpoint so they can still split.
+    if (list.length >= OCM_CAP && depth < 3) {
+      const pts = coords.length >= 3 ? coords : [
+        coords[0],
+        { lat: (coords[0].lat + coords[1].lat) / 2, lng: (coords[0].lng + coords[1].lng) / 2 },
+        coords[1],
+      ];
+      const mid = Math.floor(pts.length / 2);
       const [a, b] = await Promise.all([
-        fetchSegment(coords.slice(0, mid + 1), depth + 1),
-        fetchSegment(coords.slice(mid), depth + 1),
+        fetchSegment(pts.slice(0, mid + 1), depth + 1),
+        fetchSegment(pts.slice(mid), depth + 1),
       ]);
       return [...a, ...b];
     }
