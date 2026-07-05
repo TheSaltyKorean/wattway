@@ -110,4 +110,5 @@ Real prices vary by site, time of day, and state. Published OCM rates override t
 
 ## License
 
-MIT
+[PolyForm Noncommercial 1.0.0](LICENSE) — free to use, modify, and share for
+any noncommercial purpose. Commercial use is not permitted.
