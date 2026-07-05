@@ -163,7 +163,6 @@ export async function getRoute(
 // Long routes are queried in overlapping segments — a single query centered on
 // the route midpoint hits OCM's result cap and starves the route's endpoints.
 const SEGMENT_MILES = 120;
-const SEGMENT_RADIUS_MILES = 90;
 const SEGMENT_PARALLELISM = 4;
 
 export async function fetchChargersAlongRoute(
@@ -172,10 +171,13 @@ export async function fetchChargersAlongRoute(
   memberships: MembershipPlan[],
   ocmApiKey?: string
 ): Promise<ChargerStation[]> {
-  // Sample query centers at exact SEGMENT_MILES intervals, interpolating
-  // within segments — snapping to vertices can leave coverage gaps when the
-  // polyline's vertices are far apart
-  const samples: Coordinates[] = [routeCoords[0]];
+  // Split the route into segments of at most SEGMENT_MILES (interpolating cut
+  // points — vertex snapping can leave gaps), then query each segment's
+  // corridor bounding box. Boxes hug the corridor, so dense metro areas don't
+  // blow past the per-request result cap the way big radius queries do; if a
+  // segment still hits the cap, it is subdivided and re-queried.
+  const segments: Coordinates[][] = [];
+  let current: Coordinates[] = [routeCoords[0]];
   let sinceLast = 0;
   for (let i = 0; i < routeCoords.length - 1; i++) {
     let a = routeCoords[i];
@@ -184,39 +186,56 @@ export async function fetchChargersAlongRoute(
     while (segLen > 0 && sinceLast + segLen >= SEGMENT_MILES) {
       const t = (SEGMENT_MILES - sinceLast) / segLen;
       a = { lat: a.lat + (b.lat - a.lat) * t, lng: a.lng + (b.lng - a.lng) * t };
-      samples.push(a);
+      current.push(a);
+      segments.push(current);
+      current = [a]; // cut point belongs to both segments — no gaps
       segLen = haversine(a, b);
       sinceLast = 0;
     }
     sinceLast += segLen;
+    current.push(b);
   }
-  samples.push(routeCoords[routeCoords.length - 1]);
+  if (current.length > 1) segments.push(current);
+  if (segments.length === 0) segments.push(routeCoords);
 
-  const queryPoint = async (c: Coordinates): Promise<unknown[]> => {
+  const OCM_CAP = 1000;
+  const fetchSegment = async (coords: Coordinates[], depth: number): Promise<any[]> => {
+    const lats = coords.map((c) => c.lat);
+    const lngs = coords.map((c) => c.lng);
+    const buf = (CORRIDOR_MILES + 2) / 69;
     const params = new URLSearchParams({
       output: "json",
       levelid: "3",
-      maxresults: "1000",
+      maxresults: String(OCM_CAP),
       compact: "false",
       verbose: "false",
-      latitude: String(c.lat),
-      longitude: String(c.lng),
-      distance: String(SEGMENT_RADIUS_MILES),
-      distanceunit: "Miles",
+      boundingbox: `(${Math.min(...lats) - buf},${Math.min(...lngs) - buf}),(${Math.max(...lats) + buf},${Math.max(...lngs) + buf})`,
       includecomments: "false",
     });
     if (ocmApiKey) params.set("key", ocmApiKey);
     const res = await fetch(`${OCM_BASE}/poi/?${params}`);
     if (!res.ok) throw new Error("Open Charge Map API error");
-    return res.json();
+    const list: any[] = await res.json();
+    // Cap hit → the box was too dense; halve the segment and recurse
+    if (list.length >= OCM_CAP && depth < 3 && coords.length >= 3) {
+      const mid = Math.floor(coords.length / 2);
+      const [a, b] = await Promise.all([
+        fetchSegment(coords.slice(0, mid + 1), depth + 1),
+        fetchSegment(coords.slice(mid), depth + 1),
+      ]);
+      return [...a, ...b];
+    }
+    return list;
   };
 
   const seen = new Set<number>();
   const data: any[] = [];
-  for (let i = 0; i < samples.length; i += SEGMENT_PARALLELISM) {
-    const batch = await Promise.all(samples.slice(i, i + SEGMENT_PARALLELISM).map(queryPoint));
+  for (let i = 0; i < segments.length; i += SEGMENT_PARALLELISM) {
+    const batch = await Promise.all(
+      segments.slice(i, i + SEGMENT_PARALLELISM).map((s) => fetchSegment(s, 0))
+    );
     for (const list of batch) {
-      for (const poi of list as any[]) {
+      for (const poi of list) {
         if (!seen.has(poi.ID)) {
           seen.add(poi.ID);
           data.push(poi);

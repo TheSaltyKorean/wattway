@@ -31,7 +31,10 @@ function GeocoderInput({ label, value, onChange, placeholder, onRemove, fillSign
   const onChangeRef = useRef(onChange);
   onChangeRef.current = onChange;
   const mountedRef = useRef(true);
-  useEffect(() => () => { mountedRef.current = false; }, []);
+  useEffect(() => {
+    mountedRef.current = true; // restore after Strict Mode's replayed cleanup
+    return () => { mountedRef.current = false; };
+  }, []);
 
   const [locState, setLocState] = useState<"idle" | "locating" | "error">("idle");
   // When set, the box shows the resolved address instead of the autocomplete
@@ -46,6 +49,7 @@ function GeocoderInput({ label, value, onChange, placeholder, onRemove, fillSign
   valueRef.current = value;
   useEffect(() => {
     if (!fillSignal) return; // skip mount (0/undefined)
+    locReqRef.current++; // programmatic change supersedes in-flight lookups
     setLocApplied(valueRef.current !== null);
   }, [fillSignal]);
 
@@ -103,10 +107,13 @@ function GeocoderInput({ label, value, onChange, placeholder, onRemove, fillSign
       pac.style.width = "100%";
       pac.style.colorScheme = "dark";
       pac.addEventListener("gmp-select", async (event) => {
-        locReqRef.current++; // manual selection supersedes any pending lookup
+        // Manual selection supersedes pending lookups — and may itself be
+        // superseded before fetchFields resolves
+        const reqId = ++locReqRef.current;
         const { placePrediction } = event as google.maps.places.PlacePredictionSelectEvent;
         const place = placePrediction.toPlace();
         await place.fetchFields({ fields: ["formattedAddress", "location"] });
+        if (!mountedRef.current || locReqRef.current !== reqId) return;
         if (place.location && place.formattedAddress) {
           onChangeRef.current({
             address: place.formattedAddress,
