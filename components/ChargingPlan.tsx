@@ -22,6 +22,17 @@ function safeUrl(url: string | null): string | null {
   return url && /^https?:\/\//i.test(url) ? url : null;
 }
 
+// The link's destination is attacker-controllable (community-edited), so show
+// the bare hostname next to it — the user sees where an "Operator/Station site"
+// link actually goes before trusting it. Returns null if the URL won't parse.
+function urlHost(url: string): string | null {
+  try {
+    return new URL(url).hostname.replace(/^www\./, "");
+  } catch {
+    return null;
+  }
+}
+
 function SoCBar({ value }: { value: number }) {
   const color = value > 50 ? "#4ade80" : value > 20 ? "#facc15" : "#ef4444";
   return (
@@ -107,16 +118,21 @@ function StopCard({ stop, index }: { stop: ChargingStop; index: number }) {
         </a>
         {(() => {
           const url = safeUrl(stop.station.stationUrl) ?? safeUrl(stop.station.operatorUrl);
-          return url ? (
+          if (!url) return null;
+          const host = urlHost(url);
+          if (!host) return null; // unparseable URL — don't render a link to it
+          const label = safeUrl(stop.station.stationUrl) ? "Station site" : "Operator site";
+          return (
             <a
               href={url}
               target="_blank"
               rel="noopener noreferrer"
-              className="text-[var(--accent)] hover:underline"
+              title={url}
+              className="text-[var(--accent)] hover:underline truncate"
             >
-              {safeUrl(stop.station.stationUrl) ? "Station site ↗" : "Operator site ↗"}
+              {label} <span className="text-[var(--text-muted)]">({host})</span> ↗
             </a>
-          ) : null;
+          );
         })()}
       </div>
     </div>
