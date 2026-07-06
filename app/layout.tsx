@@ -18,18 +18,21 @@ export const viewport = {
 // Defense-in-depth CSP. This is a static site on GitHub Pages, which can't set
 // response headers, so it ships as a meta tag. It's the backstop that would
 // neutralize an injection if community-edited OCM data ever reached an HTML
-// sink. The allowances are what the Google Maps JS API, Routes/OCM/ipapi
-// fetches, and same-origin PWA assets need; 'unsafe-inline'/'unsafe-eval' are
-// required by the Maps loader and limit strictness, but connect/img/object/
-// base restrictions still hold. (frame-ancestors/sandbox are ignored in a meta
-// CSP, so they're omitted.)
+// sink. The Google-domain allowances mirror Google's documented Maps JS API
+// CSP allowlist — the weekly Maps/Places/Geocoding libraries pull modules and
+// hit endpoints across *.googleapis.com / *.gstatic.com / *.google.com, so
+// those are wildcarded to avoid blocking a code path we didn't exercise (e.g.
+// geocoding, Street View, other regions). 'unsafe-inline'/'unsafe-eval' are
+// required by the Maps loader and limit strictness, but the policy still
+// blocks any non-Google/non-self script or connection, plus object/base.
+// (frame-ancestors/sandbox are ignored in a meta CSP, so they're omitted.)
 const CSP = [
   "default-src 'self'",
-  "script-src 'self' 'unsafe-inline' 'unsafe-eval' blob: https://maps.googleapis.com https://maps.gstatic.com",
+  "script-src 'self' 'unsafe-inline' 'unsafe-eval' blob: https://*.googleapis.com https://*.gstatic.com https://*.google.com https://*.ggpht.com",
   "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
   "font-src 'self' data: https://fonts.gstatic.com",
   "img-src 'self' data: blob: https://*.googleapis.com https://*.gstatic.com https://*.google.com https://*.ggpht.com https://*.googleusercontent.com",
-  "connect-src 'self' https://*.googleapis.com https://*.gstatic.com https://api.openchargemap.io https://ipapi.co data: blob:",
+  "connect-src 'self' https://*.googleapis.com https://*.gstatic.com https://*.google.com https://api.openchargemap.io https://ipapi.co data: blob:",
   "worker-src 'self' blob:",
   "frame-src 'self' https://*.google.com",
   "object-src 'none'",
