@@ -57,7 +57,7 @@ const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" v
   <text x="122" y="478" font-family="DejaVu Sans, Arial, sans-serif" font-size="26" fill="${MUTED}">Optimized for price, your range &amp; charger reliability</text>
 
   <!-- footer url -->
-  <text x="122" y="560" font-family="DejaVu Sans, Arial, sans-serif" font-size="24" font-weight="700" fill="${ACCENT}">thesaltykorean.github.io/wattway</text>
+  <text x="122" y="560" font-family="DejaVu Sans, Arial, sans-serif" font-size="24" font-weight="700" fill="${ACCENT}">wattway.net</text>
 </svg>`;
 
 await sharp(Buffer.from(svg)).png().toFile(OUT);

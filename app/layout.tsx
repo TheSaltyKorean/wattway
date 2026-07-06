@@ -1,14 +1,14 @@
 import type { Metadata } from "next";
 import "./globals.css";
 
-const SITE_URL = "https://thesaltykorean.github.io/wattway/";
+const SITE_URL = "https://wattway.net/";
 const OG_DESCRIPTION =
   "Find the cheapest realistic way to charge on any EV road trip — a minimal sequence of stops picked from live network prices, your memberships, charger power and reliability, and your car's range.";
 
 export const metadata: Metadata = {
   // Absolute base for social-card crawlers, which can't resolve relative URLs.
-  // Includes the /wattway base path so the OG image resolves to the file served
-  // on GitHub Pages (public/og-image.png -> {SITE_URL}og-image.png).
+  // The site serves from the apex of wattway.net, so the OG image resolves to
+  // the file at the site root (public/og-image.png -> {SITE_URL}og-image.png).
   metadataBase: new URL(SITE_URL),
   title: "WattWay — Cost-Optimized EV Trip Planner",
   description:
