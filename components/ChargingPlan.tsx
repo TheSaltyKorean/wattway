@@ -117,11 +117,16 @@ function StopCard({ stop, index }: { stop: ChargingStop; index: number }) {
           Google reviews ↗
         </a>
         {(() => {
-          const url = safeUrl(stop.station.stationUrl) ?? safeUrl(stop.station.operatorUrl);
+          // Prefer the station link, but only if it's http(s) AND parseable —
+          // a malformed station URL must fall back to the operator link rather
+          // than suppress the community link entirely.
+          const usable = (u: string | null) => (safeUrl(u) && urlHost(u!) ? u! : null);
+          const stationU = usable(stop.station.stationUrl);
+          const operatorU = usable(stop.station.operatorUrl);
+          const url = stationU ?? operatorU;
           if (!url) return null;
-          const host = urlHost(url);
-          if (!host) return null; // unparseable URL — don't render a link to it
-          const label = safeUrl(stop.station.stationUrl) ? "Station site" : "Operator site";
+          const host = urlHost(url)!; // non-null: url passed the usable() check
+          const label = stationU ? "Station site" : "Operator site";
           return (
             <a
               href={url}

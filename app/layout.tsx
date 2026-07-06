@@ -15,20 +15,28 @@ export const viewport = {
   themeColor: "#0a0e14",
 };
 
-// Defense-in-depth CSP. This is a static site on GitHub Pages, which can't set
-// response headers, so it ships as a meta tag. It's the backstop that would
-// neutralize an injection if community-edited OCM data ever reached an HTML
-// sink. The Google-domain allowances mirror Google's documented Maps JS API
-// CSP allowlist — the weekly Maps/Places/Geocoding libraries pull modules and
-// hit endpoints across *.googleapis.com / *.gstatic.com / *.google.com, so
-// those are wildcarded to avoid blocking a code path we didn't exercise (e.g.
-// geocoding, Street View, other regions). 'unsafe-inline'/'unsafe-eval' are
-// required by the Maps loader and limit strictness, but the policy still
-// blocks any non-Google/non-self script or connection, plus object/base.
+// Defense-in-depth CSP for a static GitHub Pages site (no response headers, so
+// it ships as a meta tag).
+//
+// IMPORTANT — this is NOT a full XSS backstop. The Google Maps JS API requires
+// 'unsafe-inline' and 'unsafe-eval' in script-src (it injects inline scripts and
+// uses eval), and a static host can't mint per-request nonces to replace them.
+// Because 'unsafe-inline' is present, an inline-handler payload (e.g. an OCM
+// field rendered into raw HTML with an onerror=) would still execute. Runtime
+// XSS protection therefore lives at the code level and must stay there: React
+// escaping, safeUrl() http(s) gating, and the InfoWindow built via textContent.
+//
+// What this policy DOES buy: it blocks loading external scripts from any
+// non-Google/non-self origin, restricts connect-src/img-src to known hosts
+// (limiting exfiltration if injection ever occurred), and locks down
+// object-src/base-uri. The Google-domain entries mirror Google's documented
+// Maps JS API allowlist (developers.google.com/maps/documentation/javascript/
+// content-security-policy) so no Maps code path — geocoding, Street View, other
+// regions, weekly builds — is blocked.
 // (frame-ancestors/sandbox are ignored in a meta CSP, so they're omitted.)
 const CSP = [
   "default-src 'self'",
-  "script-src 'self' 'unsafe-inline' 'unsafe-eval' blob: https://*.googleapis.com https://*.gstatic.com https://*.google.com https://*.ggpht.com",
+  "script-src 'self' 'unsafe-inline' 'unsafe-eval' blob: https://*.googleapis.com https://*.gstatic.com https://*.google.com https://*.ggpht.com https://*.googleusercontent.com",
   "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
   "font-src 'self' data: https://fonts.gstatic.com",
   "img-src 'self' data: blob: https://*.googleapis.com https://*.gstatic.com https://*.google.com https://*.ggpht.com https://*.googleusercontent.com",
