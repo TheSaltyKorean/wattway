@@ -1,7 +1,15 @@
 import type { Metadata } from "next";
 import "./globals.css";
 
+const SITE_URL = "https://thesaltykorean.github.io/wattway/";
+const OG_DESCRIPTION =
+  "Find the cheapest realistic way to charge on any EV road trip — a minimal sequence of stops picked from live network prices, your memberships, charger power and reliability, and your car's range.";
+
 export const metadata: Metadata = {
+  // Absolute base for social-card crawlers, which can't resolve relative URLs.
+  // Includes the /wattway base path so the OG image resolves to the file served
+  // on GitHub Pages (public/og-image.png -> {SITE_URL}og-image.png).
+  metadataBase: new URL(SITE_URL),
   title: "WattWay — Cost-Optimized EV Trip Planner",
   description:
     "Plan your EV road trip with the cheapest possible charging stops. WattWay finds the optimal charging sequence so you spend less time and money on the road.",
@@ -9,6 +17,27 @@ export const metadata: Metadata = {
   icons: { icon: "icon-192.png", apple: "icon-192.png" },
   manifest: "manifest.json",
   appleWebApp: { capable: true, statusBarStyle: "black-translucent", title: "WattWay" },
+  openGraph: {
+    type: "website",
+    siteName: "WattWay",
+    url: SITE_URL,
+    title: "WattWay — Cost-Optimized EV Trip Planner",
+    description: OG_DESCRIPTION,
+    images: [
+      {
+        url: "og-image.png",
+        width: 1200,
+        height: 630,
+        alt: "WattWay — find the cheapest way to charge on any EV road trip",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "WattWay — Cost-Optimized EV Trip Planner",
+    description: OG_DESCRIPTION,
+    images: ["og-image.png"],
+  },
 };
 
 export const viewport = {
