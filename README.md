@@ -110,6 +110,10 @@ Real prices vary by site, time of day, and state. Published OCM rates override t
 - [ ] Share trip link
 - [ ] Mobile PWA
 
+## About
+
+Built by **TheSaltyKorean** — more at [thesaltykorean.com](https://thesaltykorean.com).
+
 ## License
 
 [PolyForm Noncommercial 1.0.0](LICENSE) — free to use, modify, and share for

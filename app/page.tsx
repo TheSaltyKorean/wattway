@@ -172,7 +172,16 @@ export default function Home() {
             </div>
           </div>
           <p className="text-xs text-[var(--text-muted)] mt-0.5">
-            Cost-optimized EV trip planner
+            Cost-optimized EV trip planner · by{" "}
+            <a
+              href="https://thesaltykorean.com"
+              target="_blank"
+              rel="noopener noreferrer"
+              onPointerDown={(e) => e.stopPropagation()}
+              className="underline hover:text-[var(--accent)] transition-colors"
+            >
+              TheSaltyKorean
+            </a>
           </p>
           <a
             href="https://venmo.com/u/TheSaltyKorean"
