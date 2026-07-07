@@ -20,11 +20,22 @@ export interface ViaStop {
 
 type PanelMode = "left" | "right" | "floating";
 
+// One-time migration for saved car ids whose meaning changed when the DB was
+// split by generation. Legacy ids that were labeled as the latest model year in
+// the old release are remapped to the current-generation profile so returning
+// users keep planning with accurate specs. Applied once, then a flag is set so
+// later (post-split) selections of the older-generation profiles still stick.
+const EV_ID_MIGRATIONS: Record<string, string> = {
+  "tesla-model-3-lr": "tesla-model-3-lr-highland",
+  "tesla-model-y-lr": "tesla-model-y-lr-2024",
+  "vw-id4-pro": "vw-id4-pro-2024",
+};
+
 export default function Home() {
   const [origin, setOrigin] = useState<Waypoint | null>(null);
   const [destination, setDestination] = useState<Waypoint | null>(null);
   const [vias, setVias] = useState<ViaStop[]>([]);
-  const [ev, setEV] = useState<EVModel>(getEVById("tesla-model-y-lr") ?? EV_DATABASE[0]); // Model Y default
+  const [ev, setEV] = useState<EVModel>(getEVById("tesla-model-y-lr-2024") ?? EV_DATABASE[0]); // current Model Y default
 
   const [membershipIds, setMembershipIds] = useState<string[]>([]);
 
@@ -32,8 +43,17 @@ export default function Home() {
   // Storage can throw in restricted contexts — persistence is best-effort.
   useEffect(() => {
     try {
-      const savedId = localStorage.getItem("wattway.evId");
+      let savedId = localStorage.getItem("wattway.evId");
       if (savedId) {
+        // One-time remap of legacy ids to their current-generation profile
+        if (!localStorage.getItem("wattway.evIdMigrated")) {
+          const migrated = EV_ID_MIGRATIONS[savedId];
+          if (migrated) {
+            savedId = migrated;
+            try { localStorage.setItem("wattway.evId", savedId); } catch { /* best-effort */ }
+          }
+          try { localStorage.setItem("wattway.evIdMigrated", "1"); } catch { /* best-effort */ }
+        }
         const saved = getEVById(savedId);
         if (saved) setEV(saved);
       }
