@@ -187,6 +187,16 @@ export const EV_DATABASE: EVModel[] = [
     efficiencyMilesPerKwh: 3.8,
   },
   {
+    id: "chevy-equinox-ev-fwd",
+    make: "Chevrolet",
+    model: "Equinox EV FWD",
+    years: "2025-2026",
+    batteryKwh: 85,
+    rangeMiles: 319,
+    maxChargekW: 150,
+    efficiencyMilesPerKwh: 3.75,
+  },
+  {
     id: "ford-f150-lightning",
     make: "Ford",
     model: "F-150 Lightning ER",
@@ -275,6 +285,26 @@ export const EV_DATABASE: EVModel[] = [
     rangeMiles: 305,
     maxChargekW: 170,
     efficiencyMilesPerKwh: 3.17,
+  },
+  {
+    id: "volvo-c40-recharge",
+    make: "Volvo",
+    model: "C40 Recharge Twin AWD",
+    years: "2023",
+    batteryKwh: 75,
+    rangeMiles: 226,
+    maxChargekW: 150,
+    efficiencyMilesPerKwh: 3.01,
+  },
+  {
+    id: "toyota-bz-awd",
+    make: "Toyota",
+    model: "bZ AWD",
+    years: "2026",
+    batteryKwh: 74.7,
+    rangeMiles: 288,
+    maxChargekW: 150,
+    efficiencyMilesPerKwh: 3.86,
   },
 ];
 

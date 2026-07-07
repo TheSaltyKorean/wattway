@@ -48,3 +48,6 @@ Community feedback that shaped WattWay:
   requested per-stop leftover-charge targets.
 - **u/element1311** — suggested cross-referencing charger reliability with
   PlugShare ratings.
+- **u/rb_stlouis** — requested the Chevrolet Equinox EV FWD.
+- **u/diatonic** — requested the Volvo C40 Recharge (MY23).
+- **u/salted_grapes** — requested the 2026 Toyota bZ AWD.
