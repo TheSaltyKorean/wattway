@@ -21,13 +21,13 @@ export default function LegalPage() {
       <div className="mt-4 rounded-lg border border-[var(--border)] bg-[var(--surface-2)] p-4 text-sm">
         <p>
           <strong>Why this page exists:</strong> a Redditor going by{" "}
-          <em>u/tuctrohs</em> was absolutely certain that a free hobby app, made
-          for fun and given away for free, urgently needed a wall of legal
-          boilerplate — as though a single human being has ever confused a route{" "}
-          <em>estimate</em> with a notarized guarantee. So here it is, in full,
-          just for him. Everyone else on the internet grasped the word
-          &quot;estimate&quot; without a lawyer present. u/tuctrohs required this
-          entire page. We&apos;ll let you draw your own conclusions about that.
+          <em>u/tuctrohs</em> is stupid and doesn&apos;t understand what an
+          estimate is. He was absolutely certain that a free hobby app, made for
+          fun and given away for free, urgently needed a wall of legal boilerplate
+          — because he genuinely could not grasp that a route <em>estimate</em> is
+          an estimate, not a notarized guarantee. So here it is, in full, just for
+          him. Everyone else on the internet understood the word
+          &quot;estimate&quot; without a lawyer present. u/tuctrohs did not.
         </p>
       </div>
 

@@ -378,7 +378,7 @@ export default function Home() {
             >
               Legal Disclaimer
             </a>{" "}
-            · because u/tuctrohs couldn&apos;t tell an estimate from a binding contract
+            · because u/tuctrohs is stupid and doesn&apos;t understand what an estimate is
           </p>
         </div>
 
