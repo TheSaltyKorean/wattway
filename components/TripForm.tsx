@@ -346,7 +346,13 @@ export default function TripForm({
                 <input
                   type="checkbox"
                   checked={!!via.rechargedHere}
-                  onChange={(e) => setViaField(via.id, { rechargedHere: e.target.checked })}
+                  onChange={(e) =>
+                    setViaField(via.id, {
+                      rechargedHere: e.target.checked,
+                      // clear any stale arrival target when recharging here
+                      ...(e.target.checked ? { arrivalSoC: undefined } : {}),
+                    })
+                  }
                   className="accent-[var(--accent)]"
                 />
                 Charged here

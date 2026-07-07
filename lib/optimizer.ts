@@ -293,6 +293,10 @@ export async function fetchChargersAlongRoute(
       if (networkPrices[network] !== undefined && network !== "Default") return networkPrices[network];
       for (const [key, price] of Object.entries(networkPrices)) {
         if (key === "Default") continue;
+        // Short keys (e.g. "OUC") only match an exact operator title via the
+        // direct lookup above — substring-matching them would misprice unrelated
+        // names ("touch", "couch"), so skip them in the fuzzy fallback.
+        if (key.length < 4) continue;
         if (haystack.includes(key.toLowerCase())) return price;
       }
       if (haystack.includes("supercharger")) return networkPrices["Tesla"] ?? 0.40;
@@ -458,7 +462,10 @@ export function optimizeStops(
     const nextAhead = withProgress.find((s) => s.progress > bestStop.progress);
     let midChargeKwh = CHARGE_TO_SOC * fullBattery;
     if (nextAhead) {
+      // Miles from this station to the next: drive back to the route from this
+      // (possibly off-route) station, then along the route, then off to the next.
       const gapMiles =
+        bestStop.distanceFromRouteMiles +
         (nextAhead.progress - bestStop.progress) * routeDistanceMiles +
         nextAhead.distanceFromRouteMiles;
       const kwhToReachNext =
@@ -477,7 +484,11 @@ export function optimizeStops(
     // planning instead of abandoning the trip; only give up when no charge
     // is possible at a low battery (genuine dead end).
     const finishesTrip = kwhForDest <= MAX_CHARGE_SOC * fullBattery;
-    if (kwhAdded <= (finishesTrip ? 0.1 : 3)) {
+    // If we deliberately need to charge above 80% here to bridge a gap to the
+    // next station, this stop is required — never coast past it even when the
+    // top-up looks small (e.g. 79% -> 82%).
+    const needsGapTopUp = chargeTarget > CHARGE_TO_SOC * fullBattery + 0.1;
+    if (!needsGapTopUp && kwhAdded <= (finishesTrip ? 0.1 : 3)) {
       if (arrivalKwh > CHARGE_TO_SOC * fullBattery - 3) {
         // Coasting past: we never leave the route, so spend only the
         // on-route miles (no detour to a station we don't visit)
@@ -561,7 +572,7 @@ function optimizeStopsMultiLeg(
   const allStops: ChargingStop[] = [];
   let planIncomplete = false;
   let arrivalSoC = soc;
-  let finalLegMiles = 0;
+  let carryMiles = 0; // miles since the last charger — spans stopless legs / vias
   for (let k = 0; k < bounds.length - 1; k++) {
     const a = bounds[k];
     const b = bounds[k + 1];
@@ -570,24 +581,35 @@ function optimizeStopsMultiLeg(
     const legDist = ((cum[b] - cum[a]) / total) * routeDistanceMiles;
     const isLast = k === bounds.length - 2;
     const endVia = isLast ? undefined : vias[k];
-    // Last leg uses the trip's arrival target; a mid-trip via uses its own min
-    // arrival SoC, or just "reach it" (MIN_SOC) if none was set.
+    // Last leg uses the trip's arrival target. A mid-trip via uses its own min
+    // arrival SoC, or just "reach it" (MIN_SOC). A "charged here" via ignores any
+    // arrival target — the car is topped up on arrival, so only reaching matters.
     const target = isLast
       ? input.targetArrivalSoC
-      : endVia?.arrivalSoC ?? MIN_SOC * 100;
+      : endVia?.rechargedHere
+        ? MIN_SOC * 100
+        : endVia?.arrivalSoC ?? MIN_SOC * 100;
     const legRes = optimizeStops(legCoords, legDist, stations, {
       ...input,
       startingSoC: soc,
       targetArrivalSoC: target,
     });
-    allStops.push(...legRes.stops);
+    if (legRes.stops.length > 0) {
+      // Keep displayed leg distances continuous across a via: fold the miles
+      // carried from the previous charger into this leg's first stop.
+      const [first, ...rest] = legRes.stops;
+      allStops.push({ ...first, legDistanceMiles: first.legDistanceMiles + carryMiles });
+      allStops.push(...rest);
+      carryMiles = legRes.finalLegMiles;
+    } else {
+      carryMiles += legRes.finalLegMiles;
+    }
     planIncomplete = planIncomplete || legRes.planIncomplete;
     arrivalSoC = legRes.arrivalSoC;
-    finalLegMiles = legRes.finalLegMiles;
     // Carry the battery into the next leg — full if the user recharges here.
     soc = endVia?.rechargedHere ? 100 : legRes.arrivalSoC;
   }
-  return { stops: allStops, arrivalSoC, finalLegMiles, planIncomplete };
+  return { stops: allStops, arrivalSoC, finalLegMiles: carryMiles, planIncomplete };
 }
 
 export async function planTrip(input: TripInput): Promise<TripPlan> {
