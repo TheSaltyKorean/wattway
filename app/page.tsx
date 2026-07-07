@@ -60,7 +60,16 @@ export default function Home() {
       if (!alreadyMigrated) {
         try { localStorage.setItem("wattway.evIdMigrated", "1"); } catch { /* best-effort */ }
       }
-      if (savedId) {
+      if (savedId === "custom") {
+        // A user-entered vehicle: restore the full spec object.
+        const raw = localStorage.getItem("wattway.customEv");
+        if (raw) {
+          const c = JSON.parse(raw);
+          if (c && typeof c.batteryKwh === "number" && typeof c.rangeMiles === "number") {
+            setEV({ ...c, id: "custom", make: "Custom" });
+          }
+        }
+      } else if (savedId) {
         const saved = getEVById(savedId);
         if (saved) setEV(saved);
       }
@@ -96,7 +105,11 @@ export default function Home() {
 
   const handleEVChange = useCallback((model: EVModel) => {
     setEV(model);
-    try { localStorage.setItem("wattway.evId", model.id); } catch { /* best-effort */ }
+    try {
+      localStorage.setItem("wattway.evId", model.id);
+      // Custom vehicles aren't in the DB, so persist the whole spec object.
+      if (model.id === "custom") localStorage.setItem("wattway.customEv", JSON.stringify(model));
+    } catch { /* best-effort */ }
   }, []);
 
   const handleMembershipsChange = useCallback((ids: string[]) => {
@@ -287,7 +300,7 @@ export default function Home() {
             onAvoidFerriesChange={(v) => { setAvoidFerries(v); persistRouteOpts(v, avoidTolls); }}
             onAvoidTollsChange={(v) => { setAvoidTolls(v); persistRouteOpts(avoidFerries, v); }}
           />
-          <EVSelector value={ev.id} onChange={handleEVChange} />
+          <EVSelector value={ev} onChange={handleEVChange} />
           <MembershipSelector selected={membershipIds} onChange={handleMembershipsChange} />
           <NetworkExcluder excluded={excludedNetworks} onChange={handleExcludedNetworksChange} />
 

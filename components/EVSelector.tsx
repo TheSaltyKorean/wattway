@@ -1,21 +1,36 @@
 "use client";
 import { useMemo } from "react";
 import { EVModel } from "@/lib/types";
-import { EV_DATABASE, getEVById } from "@/lib/evDatabase";
+import { EV_DATABASE } from "@/lib/evDatabase";
 
 interface Props {
-  value: string; // selected EV id
+  value: EVModel; // the currently selected EV (may be a "custom" one)
   onChange: (ev: EVModel) => void;
 }
 
-// Two cascading dropdowns (Make -> Model) so each carries far less text than a
-// single combined list. The selected EV id is the single source of truth: the
-// make dropdown is derived from it, so no extra local state is needed.
+const CUSTOM = "Custom";
+
+// Sensible starting point when switching into custom mode.
+const CUSTOM_DEFAULT: EVModel = {
+  id: "custom",
+  make: CUSTOM,
+  model: "My EV",
+  years: "",
+  batteryKwh: 75,
+  rangeMiles: 280,
+  maxChargekW: 150,
+  efficiencyMilesPerKwh: 3.73,
+};
+
+// Two cascading dropdowns (Make -> Model), plus a "Custom" make that lets the
+// user type their own battery / range / charge specs — real-world numbers can
+// differ from EPA figures, so let people override them.
 export default function EVSelector({ value, onChange }: Props) {
-  const current = getEVById(value) ?? EV_DATABASE[0];
+  const current = value;
+  const isCustom = current.id === "custom";
 
   const makes = useMemo(
-    () => Array.from(new Set(EV_DATABASE.map((e) => e.make))),
+    () => [...Array.from(new Set(EV_DATABASE.map((e) => e.make))), CUSTOM],
     []
   );
   const variants = useMemo(
@@ -25,6 +40,36 @@ export default function EVSelector({ value, onChange }: Props) {
 
   const selectClass =
     "w-full bg-[var(--surface-2)] border border-[var(--border)] text-[var(--text)] rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-[var(--accent)] transition-colors";
+  const numClass =
+    "w-full bg-[var(--surface-2)] border border-[var(--border)] text-[var(--text)] rounded-lg px-2 py-2 text-sm tabular-nums focus:outline-none focus:border-[var(--accent)] transition-colors";
+
+  // Update one custom field, re-deriving efficiency (range / usable battery).
+  const setCustom = (patch: Partial<EVModel>) => {
+    const base = isCustom ? current : CUSTOM_DEFAULT;
+    const next = { ...base, ...patch, id: "custom", make: CUSTOM };
+    next.efficiencyMilesPerKwh =
+      next.rangeMiles > 0 && next.batteryKwh > 0
+        ? Math.round((next.rangeMiles / next.batteryKwh) * 100) / 100
+        : 0;
+    onChange(next);
+  };
+
+  const numField = (
+    label: string,
+    val: number,
+    key: "batteryKwh" | "rangeMiles" | "maxChargekW"
+  ) => (
+    <label className="flex-1 space-y-1">
+      <span className="text-[10px] text-[var(--text-muted)] uppercase tracking-wide">{label}</span>
+      <input
+        type="number"
+        min={0}
+        value={val || ""}
+        onChange={(e) => setCustom({ [key]: Math.max(0, Number(e.target.value)) })}
+        className={numClass}
+      />
+    </label>
+  );
 
   return (
     <div className="space-y-2">
@@ -33,9 +78,12 @@ export default function EVSelector({ value, onChange }: Props) {
       </label>
       <select
         aria-label="Vehicle make"
-        value={current.make}
+        value={isCustom ? CUSTOM : current.make}
         onChange={(e) => {
-          // Switching make selects that make's first variant
+          if (e.target.value === CUSTOM) {
+            setCustom({});
+            return;
+          }
           const first = EV_DATABASE.find((v) => v.make === e.target.value);
           if (first) onChange(first);
         }}
@@ -47,21 +95,35 @@ export default function EVSelector({ value, onChange }: Props) {
           </option>
         ))}
       </select>
-      <select
-        aria-label="Vehicle model"
-        value={current.id}
-        onChange={(e) => {
-          const ev = getEVById(e.target.value);
-          if (ev) onChange(ev);
-        }}
-        className={selectClass}
-      >
-        {variants.map((ev) => (
-          <option key={ev.id} value={ev.id}>
-            {ev.model} ({ev.years}) — {ev.rangeMiles}mi
-          </option>
-        ))}
-      </select>
+
+      {isCustom ? (
+        <div className="space-y-2">
+          <div className="flex gap-2">
+            {numField("Battery kWh", current.batteryKwh, "batteryKwh")}
+            {numField("Range mi", current.rangeMiles, "rangeMiles")}
+            {numField("Max kW", current.maxChargekW, "maxChargekW")}
+          </div>
+          <p className="text-[10px] text-[var(--text-muted)]">
+            Enter your car&apos;s real numbers ({current.efficiencyMilesPerKwh || 0} mi/kWh).
+          </p>
+        </div>
+      ) : (
+        <select
+          aria-label="Vehicle model"
+          value={current.id}
+          onChange={(e) => {
+            const ev = EV_DATABASE.find((v) => v.id === e.target.value);
+            if (ev) onChange(ev);
+          }}
+          className={selectClass}
+        >
+          {variants.map((ev) => (
+            <option key={ev.id} value={ev.id}>
+              {ev.model} ({ev.years}) — {ev.rangeMiles}mi
+            </option>
+          ))}
+        </select>
+      )}
     </div>
   );
 }
