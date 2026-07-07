@@ -56,3 +56,4 @@ Community feedback that shaped WattWay:
 - **u/diatonic** — requested the Volvo C40 Recharge (MY23).
 - **u/salted_grapes** — requested the 2026 Toyota bZ AWD.
 - **u/Jackpot777** — requested the ability to deselect/exclude charging networks.
+- **u/Quiet_Reality_6612** — requested the F-150 Lightning Standard Range.
