@@ -24,7 +24,7 @@ export default function Home() {
   const [origin, setOrigin] = useState<Waypoint | null>(null);
   const [destination, setDestination] = useState<Waypoint | null>(null);
   const [vias, setVias] = useState<ViaStop[]>([]);
-  const [ev, setEV] = useState<EVModel>(EV_DATABASE[1]); // Model Y default
+  const [ev, setEV] = useState<EVModel>(getEVById("tesla-model-y-lr") ?? EV_DATABASE[0]); // Model Y default
 
   const [membershipIds, setMembershipIds] = useState<string[]>([]);
 
