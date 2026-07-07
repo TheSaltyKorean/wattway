@@ -125,7 +125,8 @@ export async function getRoute(
   origin: Coordinates,
   destination: Coordinates,
   waypoints: Coordinates[],
-  googleKey: string
+  googleKey: string,
+  modifiers?: { avoidFerries?: boolean; avoidTolls?: boolean }
 ): Promise<{ geometry: LineString; distanceMiles: number; durationMinutes: number }> {
   const res = await fetch(`${ROUTES_API_URL}?key=${googleKey}`, {
     method: "POST",
@@ -139,6 +140,10 @@ export async function getRoute(
       intermediates: waypoints.map((w) => ({ location: { latLng: { latitude: w.lat, longitude: w.lng } } })),
       travelMode: "DRIVE",
       polylineQuality: "OVERVIEW",
+      routeModifiers: {
+        avoidFerries: !!modifiers?.avoidFerries,
+        avoidTolls: !!modifiers?.avoidTolls,
+      },
     }),
   });
   const data = await res.json().catch(() => null);
@@ -489,7 +494,8 @@ export async function planTrip(input: TripInput): Promise<TripPlan> {
     input.origin.coords,
     input.destination.coords,
     (input.waypoints ?? []).map((w) => w.coords),
-    googleKey
+    googleKey,
+    { avoidFerries: input.avoidFerries, avoidTolls: input.avoidTolls }
   );
 
   const routeCoords: Coordinates[] = (geometry.coordinates as [number, number][]).map(

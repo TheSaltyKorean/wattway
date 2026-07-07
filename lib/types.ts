@@ -84,4 +84,8 @@ export interface TripInput {
   targetArrivalSoC: number;
   networkPrices: NetworkPrices;
   memberships?: MembershipPlan[];
+  // Routes API route modifiers (default false). Avoiding ferries prevents
+  // "driving" routes that cross open water (e.g. the Lake Michigan car ferry).
+  avoidFerries?: boolean;
+  avoidTolls?: boolean;
 }

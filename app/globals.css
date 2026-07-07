@@ -36,3 +36,11 @@ body {
   background: #008cff;
   animation: neon-glow 1.6s ease-in-out infinite;
 }
+
+/* Global wait cursor while async work is in flight (route calc, geolocation).
+   Toggled via body.app-busy by useBusyCursor; !important so it overrides the
+   map's grab cursor and button pointers during the busy window. */
+body.app-busy,
+body.app-busy * {
+  cursor: wait !important;
+}

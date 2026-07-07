@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import { ensureMapsConfigured, importLibrary } from "@/lib/maps";
 import { Waypoint } from "@/lib/types";
 import type { ViaStop } from "@/app/page";
+import { useBusyCursor } from "@/lib/useBusyCursor";
 
 interface GeocoderInputProps {
   label: string;
@@ -37,6 +38,8 @@ function GeocoderInput({ label, value, onChange, placeholder, onRemove, fillSign
   }, []);
 
   const [locState, setLocState] = useState<"idle" | "locating" | "error">("idle");
+  // Wait cursor while resolving the user's current location
+  useBusyCursor(locState === "locating");
   // When set, the box shows the resolved address instead of the autocomplete
   // (which has no API for setting its text). The widget stays mounted, hidden.
   const [locApplied, setLocApplied] = useState(false);
@@ -227,6 +230,10 @@ interface TripFormProps {
   onViasChange: (vias: ViaStop[]) => void;
   onSoCChange: (soc: number) => void;
   onArrivalSoCChange: (soc: number) => void;
+  avoidFerries: boolean;
+  avoidTolls: boolean;
+  onAvoidFerriesChange: (v: boolean) => void;
+  onAvoidTollsChange: (v: boolean) => void;
 }
 
 function socColor(v: number): string {
@@ -245,6 +252,10 @@ export default function TripForm({
   onViasChange,
   onSoCChange,
   onArrivalSoCChange,
+  avoidFerries,
+  avoidTolls,
+  onAvoidFerriesChange,
+  onAvoidTollsChange,
 }: TripFormProps) {
   const addVia = () => {
     const nextId = vias.reduce((m, v) => Math.max(m, v.id), 0) + 1;
@@ -354,6 +365,30 @@ export default function TripForm({
           <span>Just arrive</span>
           <span>Ready to go</span>
         </div>
+      </div>
+
+      <div className="space-y-2">
+        <label className="text-xs font-medium text-[var(--text-muted)] uppercase tracking-wider">
+          Route options
+        </label>
+        <label className="flex items-center gap-2 cursor-pointer text-sm text-[var(--text)]">
+          <input
+            type="checkbox"
+            checked={avoidFerries}
+            onChange={(e) => onAvoidFerriesChange(e.target.checked)}
+            className="accent-[#4ade80]"
+          />
+          <span>Avoid ferries</span>
+        </label>
+        <label className="flex items-center gap-2 cursor-pointer text-sm text-[var(--text)]">
+          <input
+            type="checkbox"
+            checked={avoidTolls}
+            onChange={(e) => onAvoidTollsChange(e.target.checked)}
+            className="accent-[#4ade80]"
+          />
+          <span>Avoid tolls</span>
+        </label>
       </div>
     </div>
   );

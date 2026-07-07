@@ -9,6 +9,7 @@ import EVSelector from "@/components/EVSelector";
 import MembershipSelector from "@/components/MembershipSelector";
 import ChargingPlan from "@/components/ChargingPlan";
 import { getMembershipById } from "@/lib/memberships";
+import { useBusyCursor } from "@/lib/useBusyCursor";
 
 const MapView = dynamic(() => import("@/components/MapView"), { ssr: false });
 
@@ -52,6 +53,12 @@ export default function Home() {
           });
         }
       }
+      const savedRouteOpts = localStorage.getItem("wattway.routeOpts");
+      if (savedRouteOpts) {
+        const o = JSON.parse(savedRouteOpts);
+        if (typeof o.avoidFerries === "boolean") setAvoidFerries(o.avoidFerries);
+        if (typeof o.avoidTolls === "boolean") setAvoidTolls(o.avoidTolls);
+      }
     } catch { /* storage unavailable or corrupt — run without persistence */ }
   }, []);
 
@@ -66,12 +73,24 @@ export default function Home() {
   }, []);
   const [startingSoC, setStartingSoC] = useState(80);
   const [arrivalSoC, setArrivalSoC] = useState(10);
+  // Route options. Ferries are avoided by default so "driving" routes never
+  // cross open water (e.g. the Lake Michigan car ferry); tolls are allowed.
+  const [avoidFerries, setAvoidFerries] = useState(true);
+  const [avoidTolls, setAvoidTolls] = useState(false);
+  const persistRouteOpts = useCallback((ferries: boolean, tolls: boolean) => {
+    try {
+      localStorage.setItem("wattway.routeOpts", JSON.stringify({ avoidFerries: ferries, avoidTolls: tolls }));
+    } catch { /* best-effort */ }
+  }, []);
   const [plan, setPlan] = useState<TripPlan | null>(null);
   // Captured at plan time so the destination card can't be relabeled by
   // input changes made after the plan was computed
   const [plannedDestAddress, setPlannedDestAddress] = useState<string | undefined>(undefined);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Wait cursor while a route is being calculated
+  useBusyCursor(loading);
 
   // Panel docking: right (default), left, or floating with a saved position
   const [panelMode, setPanelMode] = useState<PanelMode>("right");
@@ -124,6 +143,8 @@ export default function Home() {
         memberships: membershipIds
           .map(getMembershipById)
           .filter((m): m is NonNullable<typeof m> => m !== undefined),
+        avoidFerries,
+        avoidTolls,
       });
       setPlan(result);
       setPlannedDestAddress(destination.address);
@@ -132,7 +153,7 @@ export default function Home() {
     } finally {
       setLoading(false);
     }
-  }, [origin, destination, vias, ev, startingSoC, arrivalSoC, membershipIds]);
+  }, [origin, destination, vias, ev, startingSoC, arrivalSoC, membershipIds, avoidFerries, avoidTolls]);
 
   const canPlan = origin && destination && !loading;
 
@@ -217,6 +238,10 @@ export default function Home() {
             onViasChange={setVias}
             onSoCChange={setStartingSoC}
             onArrivalSoCChange={setArrivalSoC}
+            avoidFerries={avoidFerries}
+            avoidTolls={avoidTolls}
+            onAvoidFerriesChange={(v) => { setAvoidFerries(v); persistRouteOpts(v, avoidTolls); }}
+            onAvoidTollsChange={(v) => { setAvoidTolls(v); persistRouteOpts(avoidFerries, v); }}
           />
           <EVSelector value={ev.id} onChange={handleEVChange} />
           <MembershipSelector selected={membershipIds} onChange={handleMembershipsChange} />
