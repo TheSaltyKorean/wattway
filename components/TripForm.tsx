@@ -53,6 +53,7 @@ function GeocoderInput({ label, value, onChange, placeholder, onRemove, fillSign
   useEffect(() => {
     if (!fillSignal) return; // skip mount (0/undefined)
     locReqRef.current++; // programmatic change supersedes in-flight lookups
+    setLocState("idle"); // abandon any in-flight lookup so the busy cursor clears
     setLocApplied(valueRef.current !== null);
   }, [fillSignal]);
 
@@ -113,6 +114,7 @@ function GeocoderInput({ label, value, onChange, placeholder, onRemove, fillSign
         // Manual selection supersedes pending lookups — and may itself be
         // superseded before fetchFields resolves
         const reqId = ++locReqRef.current;
+        setLocState("idle"); // abandon any in-flight location lookup (clears busy cursor)
         const { placePrediction } = event as google.maps.places.PlacePredictionSelectEvent;
         const place = placePrediction.toPlace();
         await place.fetchFields({ fields: ["formattedAddress", "location"] });
