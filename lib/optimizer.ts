@@ -140,6 +140,11 @@ export async function getRoute(
       intermediates: waypoints.map((w) => ({ location: { latLng: { latitude: w.lat, longitude: w.lng } } })),
       travelMode: "DRIVE",
       polylineQuality: "OVERVIEW",
+      // Route modifiers are Google *preferences*, not hard constraints — a route
+      // may still include a ferry/toll when no reasonable alternative exists
+      // (e.g. an island destination). Good enough for the common case (a land
+      // detour exists, as with Grand Rapids -> Wisconsin Dells); a "this route
+      // still needs a ferry" warning is on the roadmap.
       routeModifiers: {
         avoidFerries: !!modifiers?.avoidFerries,
         avoidTolls: !!modifiers?.avoidTolls,

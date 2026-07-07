@@ -26,6 +26,10 @@ community feedback comes in (Reddit, Show HN, GitHub issues).
   remaining on arrival at *each* stop, not just the final destination (e.g.
   "reach the mid-trip stop with 40%"). Today there's a single arrival target for
   the destination. _(requested by u/jdogsparky2626.)_
+- **Cross-reference charger reliability with PlugShare ratings** — factor
+  PlugShare's community reliability scores into charger selection alongside the
+  current Open Charge Map signals. _(requested by u/element1311; note: PlugShare
+  has no public API, so this needs a data source / partnership.)_
 - _(add new requests here as they arrive)_
 
 ## 🔭 Planned / exploring
@@ -34,8 +38,13 @@ community feedback comes in (Reddit, Show HN, GitHub issues).
 - Real-time / time-of-use pricing (needs a commercial feed, e.g. Paren or Chargeprice)
 - Multiple route alternatives with side-by-side cost comparison
 - Shareable trip links
+- Warn when a route still requires a ferry — Google's `avoidFerries` is a
+  preference, not a guarantee, so surface a notice when the returned route still
+  crosses water instead of silently treating ferry miles as drivable
 
 ## 🙏 Thanks
 Community feedback that shaped WattWay:
 - **u/jdogsparky2626** — spotted the Lake Michigan ferry routing bug and
   requested per-stop leftover-charge targets.
+- **u/element1311** — suggested cross-referencing charger reliability with
+  PlugShare ratings.
