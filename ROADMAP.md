@@ -30,6 +30,10 @@ community feedback comes in (Reddit, Show HN, GitHub issues).
   PlugShare's community reliability scores into charger selection alongside the
   current Open Charge Map signals. _(requested by u/element1311; note: PlugShare
   has no public API, so this needs a data source / partnership.)_
+- **Deselect / exclude charging networks** — let the user turn off networks they
+  don't want to use (a broken, disliked, or inaccessible network) so the
+  optimizer skips them entirely, alongside the existing membership selection.
+  _(requested by u/Jackpot777.)_
 - _(add new requests here as they arrive)_
 
 ## 🔭 Planned / exploring
@@ -51,3 +55,4 @@ Community feedback that shaped WattWay:
 - **u/rb_stlouis** — requested the Chevrolet Equinox EV FWD.
 - **u/diatonic** — requested the Volvo C40 Recharge (MY23).
 - **u/salted_grapes** — requested the 2026 Toyota bZ AWD.
+- **u/Jackpot777** — requested the ability to deselect/exclude charging networks.
