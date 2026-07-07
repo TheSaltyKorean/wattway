@@ -17,7 +17,7 @@ community feedback comes in (Reddit, Show HN, GitHub issues).
 - From ⇄ To swap
 - Installable PWA
 - Custom domain (wattway.net) + social share card (OG/Twitter)
-- **Route options: avoid ferries (default on) / avoid tolls**
+- **Route options: avoid ferries (default on) / avoid tolls** — ferry fix flagged by u/jdogsparky2626
 - Wait cursor during route calculation and location lookup
 - Google Analytics (usage measurement)
 
@@ -25,7 +25,7 @@ community feedback comes in (Reddit, Show HN, GitHub issues).
 - **Per-stop leftover charge target** — let the user set the battery % they want
   remaining on arrival at *each* stop, not just the final destination (e.g.
   "reach the mid-trip stop with 40%"). Today there's a single arrival target for
-  the destination. _(Reddit request.)_
+  the destination. _(requested by u/jdogsparky2626.)_
 - _(add new requests here as they arrive)_
 
 ## 🔭 Planned / exploring
@@ -34,3 +34,8 @@ community feedback comes in (Reddit, Show HN, GitHub issues).
 - Real-time / time-of-use pricing (needs a commercial feed, e.g. Paren or Chargeprice)
 - Multiple route alternatives with side-by-side cost comparison
 - Shareable trip links
+
+## 🙏 Thanks
+Community feedback that shaped WattWay:
+- **u/jdogsparky2626** — spotted the Lake Michigan ferry routing bug and
+  requested per-stop leftover-charge targets.
