@@ -370,12 +370,23 @@ export const EV_DATABASE: EVModel[] = [
     id: "ford-f150-lightning-sr",
     make: "Ford",
     model: "F-150 Lightning SR",
-    years: "2023-2025",
+    years: "2023-2024",
     batteryKwh: 98,
     rangeMiles: 240,
     maxChargekW: 120,
     efficiencyMilesPerKwh: 2.45,
   },
+  {
+    id: "ford-f150-lightning-sr-2025",
+    make: "Ford",
+    model: "F-150 Lightning SR",
+    years: "2025",
+    batteryKwh: 98,
+    rangeMiles: 240,
+    maxChargekW: 150,
+    efficiencyMilesPerKwh: 2.45,
+  },
+
   {
     id: "ford-f150-lightning",
     make: "Ford",
@@ -386,6 +397,17 @@ export const EV_DATABASE: EVModel[] = [
     maxChargekW: 150,
     efficiencyMilesPerKwh: 2.44,
   },
+  {
+    id: "ford-f150-lightning-2025",
+    make: "Ford",
+    model: "F-150 Lightning ER",
+    years: "2025",
+    batteryKwh: 131,
+    rangeMiles: 320,
+    maxChargekW: 150,
+    efficiencyMilesPerKwh: 2.44,
+  },
+
   {
     id: "ford-mach-e-er-rwd",
     make: "Ford",
@@ -567,6 +589,16 @@ export const EV_DATABASE: EVModel[] = [
     efficiencyMilesPerKwh: 3.13,
   },
   {
+    id: "polestar-2-lr-sm-2022",
+    make: "Polestar",
+    model: "2 LR Single Motor",
+    years: "2022-2023",
+    batteryKwh: 75,
+    rangeMiles: 270,
+    maxChargekW: 150,
+    efficiencyMilesPerKwh: 3.6,
+  },
+  {
     id: "polestar-2-lr-sm",
     make: "Polestar",
     model: "2 LR Single Motor",
@@ -596,6 +628,17 @@ export const EV_DATABASE: EVModel[] = [
     maxChargekW: 175,
     efficiencyMilesPerKwh: 3.74,
   },
+  {
+    id: "audi-q4-etron-55",
+    make: "Audi",
+    model: "Q4 55 e-tron quattro",
+    years: "2025",
+    batteryKwh: 77,
+    rangeMiles: 258,
+    maxChargekW: 175,
+    efficiencyMilesPerKwh: 3.35,
+  },
+
 ];
 
 // Typical non-member DCFC rates, 2026 US market survey
