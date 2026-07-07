@@ -7,6 +7,7 @@ import { planTrip } from "@/lib/optimizer";
 import TripForm from "@/components/TripForm";
 import EVSelector from "@/components/EVSelector";
 import MembershipSelector from "@/components/MembershipSelector";
+import NetworkExcluder from "@/components/NetworkExcluder";
 import ChargingPlan from "@/components/ChargingPlan";
 import { getMembershipById } from "@/lib/memberships";
 import { useBusyCursor } from "@/lib/useBusyCursor";
@@ -40,6 +41,7 @@ export default function Home() {
   const [ev, setEV] = useState<EVModel>(getEVById("tesla-model-y-lr-2024") ?? EV_DATABASE[0]); // current Model Y default
 
   const [membershipIds, setMembershipIds] = useState<string[]>([]);
+  const [excludedNetworks, setExcludedNetworks] = useState<string[]>([]);
 
   // Remember the user's car and memberships across visits.
   // Storage can throw in restricted contexts — persistence is best-effort.
@@ -66,6 +68,11 @@ export default function Home() {
       if (savedMemberships) {
         const ids = JSON.parse(savedMemberships);
         if (Array.isArray(ids)) setMembershipIds(ids.filter((id) => getMembershipById(id)));
+      }
+      const savedExcluded = localStorage.getItem("wattway.excludedNetworks");
+      if (savedExcluded) {
+        const nets = JSON.parse(savedExcluded);
+        if (Array.isArray(nets)) setExcludedNetworks(nets.filter((n) => typeof n === "string"));
       }
       const savedPanel = localStorage.getItem("wattway.panel");
       if (savedPanel) {
@@ -95,6 +102,11 @@ export default function Home() {
   const handleMembershipsChange = useCallback((ids: string[]) => {
     setMembershipIds(ids);
     try { localStorage.setItem("wattway.memberships", JSON.stringify(ids)); } catch { /* best-effort */ }
+  }, []);
+
+  const handleExcludedNetworksChange = useCallback((nets: string[]) => {
+    setExcludedNetworks(nets);
+    try { localStorage.setItem("wattway.excludedNetworks", JSON.stringify(nets)); } catch { /* best-effort */ }
   }, []);
   const [startingSoC, setStartingSoC] = useState(80);
   const [arrivalSoC, setArrivalSoC] = useState(10);
@@ -176,6 +188,7 @@ export default function Home() {
           .filter((m): m is NonNullable<typeof m> => m !== undefined),
         avoidFerries,
         avoidTolls,
+        excludedNetworks,
       });
       setPlan(result);
       setPlannedDestAddress(destination.address);
@@ -184,7 +197,7 @@ export default function Home() {
     } finally {
       setLoading(false);
     }
-  }, [origin, destination, vias, ev, startingSoC, arrivalSoC, membershipIds, avoidFerries, avoidTolls]);
+  }, [origin, destination, vias, ev, startingSoC, arrivalSoC, membershipIds, avoidFerries, avoidTolls, excludedNetworks]);
 
   const canPlan = origin && destination && !loading;
 
@@ -276,6 +289,7 @@ export default function Home() {
           />
           <EVSelector value={ev.id} onChange={handleEVChange} />
           <MembershipSelector selected={membershipIds} onChange={handleMembershipsChange} />
+          <NetworkExcluder excluded={excludedNetworks} onChange={handleExcludedNetworksChange} />
 
           <button
             onClick={handlePlan}

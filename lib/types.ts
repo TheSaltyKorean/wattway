@@ -91,4 +91,7 @@ export interface TripInput {
   // "driving" routes that cross open water (e.g. the Lake Michigan car ferry).
   avoidFerries?: boolean;
   avoidTolls?: boolean;
+  // Networks the user has opted out of — stations on these are excluded from
+  // planning (matched case-insensitively against the operator/name).
+  excludedNetworks?: string[];
 }

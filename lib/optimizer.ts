@@ -355,12 +355,21 @@ export function optimizeStops(
   // non-Tesla operator (e.g. Buc-ee's hosts) are left in. This already lets a
   // non-Tesla (incl. NACS) EV use OPEN Supercharger sites while excluding
   // Tesla-only ones — so no separate NACS handling is needed here.
-  const usable = ev.make === "Tesla"
+  // Networks the user opted out of (case-insensitive substring match on the
+  // operator title or station name).
+  const excluded = (input.excludedNetworks ?? []).map((n) => n.toLowerCase());
+  const notExcluded = (s: ChargerStation) => {
+    if (excluded.length === 0) return true;
+    const hay = `${s.network} ${s.name}`.toLowerCase();
+    return !excluded.some((e) => e && hay.includes(e));
+  };
+  const usable = (ev.make === "Tesla"
     ? stations
     : stations.filter((s) => {
         const n = s.network.toLowerCase();
         return !(n.includes("tesla") && !n.includes("non-tesla"));
-      });
+      })
+  ).filter(notExcluded);
 
   // Each pass carries its own detour distance — a charger can be on-route
   // outbound but miles off-route on the return leg
