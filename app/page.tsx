@@ -377,7 +377,7 @@ export default function Home() {
             >
               Legal Disclaimer
             </a>{" "}
-            · estimates only, not guaranteed
+            · because u/tuctrohs couldn&apos;t tell an estimate from a binding contract
           </p>
         </div>
 
