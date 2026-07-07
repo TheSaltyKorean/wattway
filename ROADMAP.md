@@ -20,20 +20,27 @@ community feedback comes in (Reddit, Show HN, GitHub issues).
 - **Route options: avoid ferries (default on) / avoid tolls** — ferry fix flagged by u/jdogsparky2626
 - Wait cursor during route calculation and location lookup
 - Google Analytics (usage measurement)
+- **Per-stop arrival charge + "charged here"** — set a minimum battery % on
+  arrival at each stop, or mark a stop as a full recharge (hotel / destination /
+  overnight L2) — u/jdogsparky2626, u/Upset_Region8582
+- **Reorder trip stops** (↑/↓) so a newly-added stop can be slotted between
+  existing ones — u/Upset_Region8582
+- **Deselect / exclude charging networks** — u/Jackpot777
+- **Municipal / utility charging pricing** (Seattle City Light, Tacoma Power,
+  OUC) so city networks aren't treated as the generic default — u/Upset_Region8582
+- **Long-route charging-desert fix** — bridge sparse-charger gaps by charging up
+  to 95% instead of giving up mid-route (Seattle → Key West) — u/Upset_Region8582
+- **Dark-mode contrast fix** for the small charging-stop card text — u/Upset_Region8582
 
 ## 🗳️ Requested (from community feedback)
-- **Per-stop leftover charge target** — let the user set the battery % they want
-  remaining on arrival at *each* stop, not just the final destination (e.g.
-  "reach the mid-trip stop with 40%"). Today there's a single arrival target for
-  the destination. _(requested by u/jdogsparky2626.)_
 - **Cross-reference charger reliability with PlugShare ratings** — factor
   PlugShare's community reliability scores into charger selection alongside the
   current Open Charge Map signals. _(requested by u/element1311; note: PlugShare
   has no public API, so this needs a data source / partnership.)_
-- **Deselect / exclude charging networks** — let the user turn off networks they
-  don't want to use (a broken, disliked, or inaccessible network) so the
-  optimizer skips them entirely, alongside the existing membership selection.
-  _(requested by u/Jackpot777.)_
+- **Model per-minute municipal networks** — some city networks bill per minute,
+  not per kWh (e.g. Austin Energy at $0.21/min), so their effective $/kWh depends
+  on the charger's power. Needs power-aware cost math to price them accurately;
+  for now only per-kWh municipal networks are priced. _(surfaced by u/Upset_Region8582.)_
 - _(add new requests here as they arrive)_
 
 ## 🔭 Planned / exploring
@@ -57,3 +64,6 @@ Community feedback that shaped WattWay:
 - **u/salted_grapes** — requested the 2026 Toyota bZ AWD.
 - **u/Jackpot777** — requested the ability to deselect/exclude charging networks.
 - **u/Quiet_Reality_6612** — requested the F-150 Lightning Standard Range.
+- **u/Upset_Region8582** — surfaced the dark-mode contrast and Seattle → Key West
+  long-route bugs, and suggested metro/municipal charging pricing, per-stop
+  "charged here" destination charging, and easier mid-list stop insertion.
