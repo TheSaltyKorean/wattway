@@ -691,7 +691,7 @@ export const EV_DATABASE: EVModel[] = [
   {
     id: "mercedes-eqe-suv-350",
     make: "Mercedes-Benz",
-    model: "EQE SUV 350 4MATIC",
+    model: "EQE SUV 350+ (RWD)",
     years: "2024-2025",
     batteryKwh: 96.1,
     rangeMiles: 307,

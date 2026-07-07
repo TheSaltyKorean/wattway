@@ -609,12 +609,15 @@ function optimizeStopsMultiLeg(
     }
     planIncomplete = planIncomplete || legRes.planIncomplete;
     arrivalSoC = legRes.arrivalSoC;
-    // Carry the battery into the next leg — full if the user recharges here.
-    soc = endVia?.rechargedHere ? 100 : legRes.arrivalSoC;
-    // A full recharge at this via also resets the "miles since last charge"
-    // counter — pre-hotel miles were driven on the previous charge, so they
-    // must not inflate the first fast-charge stop after the recharge.
-    if (endVia?.rechargedHere) carryMiles = 0;
+    // Carry the battery into the next leg — full if the user recharges here, but
+    // only if we could actually reach this via. If the leg was incomplete (the
+    // hotel is beyond range), don't fake a full recharge; keep the low arrival
+    // SoC so the plan stays honestly flagged incomplete.
+    const recharged = !!endVia?.rechargedHere && !legRes.planIncomplete;
+    soc = recharged ? 100 : legRes.arrivalSoC;
+    // A reachable full recharge also resets the "miles since last charge" counter
+    // so pre-hotel miles don't inflate the first fast-charge stop after it.
+    if (recharged) carryMiles = 0;
   }
   return { stops: allStops, arrivalSoC, finalLegMiles: carryMiles, planIncomplete };
 }
