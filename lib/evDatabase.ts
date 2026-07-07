@@ -107,6 +107,16 @@ export const EV_DATABASE: EVModel[] = [
     efficiencyMilesPerKwh: 4.0,
   },
   {
+    id: "kia-ev6-wind-awd-2022",
+    make: "Kia",
+    model: "EV6 Wind AWD",
+    years: "2022",
+    batteryKwh: 77.4,
+    rangeMiles: 274,
+    maxChargekW: 233,
+    efficiencyMilesPerKwh: 3.54,
+  },
+  {
     id: "kia-ev6-wind-awd",
     make: "Kia",
     model: "EV6 Wind AWD",
