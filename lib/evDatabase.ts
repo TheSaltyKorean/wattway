@@ -68,7 +68,7 @@ export const EV_DATABASE: EVModel[] = [
     year: 2022,
     batteryKwh: 58,
     rangeMiles: 232,
-    maxChargekW: 233,
+    maxChargekW: 180,
     efficiencyMilesPerKwh: 4.0,
   },
   {
@@ -87,9 +87,9 @@ export const EV_DATABASE: EVModel[] = [
     model: "EV6 GT-Line AWD",
     year: 2024,
     batteryKwh: 77.4,
-    rangeMiles: 274,
+    rangeMiles: 252,
     maxChargekW: 233,
-    efficiencyMilesPerKwh: 3.54,
+    efficiencyMilesPerKwh: 3.26,
   },
   {
     id: "kia-ev6-gt",
