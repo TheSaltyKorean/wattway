@@ -351,9 +351,10 @@ export function optimizeStops(
   // Tesla-operated sites are unusable by other makes unless OCM explicitly
   // marks them open ("Tesla (including non-tesla)"). Plain "Tesla" operators
   // are assumed Tesla-only. Stations merely *named* "...Supercharger" under a
-  // non-Tesla operator (e.g. Buc-ee's hosts) are left in. NACS-capable EVs
-  // (native port or adapter) can use Tesla Superchargers, so they're not filtered.
-  const usable = ev.make === "Tesla" || ev.nacs
+  // non-Tesla operator (e.g. Buc-ee's hosts) are left in. This already lets a
+  // non-Tesla (incl. NACS) EV use OPEN Supercharger sites while excluding
+  // Tesla-only ones — so no separate NACS handling is needed here.
+  const usable = ev.make === "Tesla"
     ? stations
     : stations.filter((s) => {
         const n = s.network.toLowerCase();

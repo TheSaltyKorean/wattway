@@ -9,8 +9,6 @@ export interface EVModel {
   rangeMiles: number;
   maxChargekW: number;
   efficiencyMilesPerKwh: number;
-  // NACS-capable (native port or adapter) → may use Tesla Supercharger sites.
-  nacs?: boolean;
 }
 
 export interface Coordinates {

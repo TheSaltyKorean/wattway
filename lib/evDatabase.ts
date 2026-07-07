@@ -65,7 +65,6 @@ export const EV_DATABASE: EVModel[] = [
     rangeMiles: 335,
     maxChargekW: 350,
     efficiencyMilesPerKwh: 3.04,
-    nacs: true,
   },
   {
     id: "hyundai-ioniq9-std",
@@ -76,7 +75,6 @@ export const EV_DATABASE: EVModel[] = [
     rangeMiles: 280,
     maxChargekW: 350,
     efficiencyMilesPerKwh: 3.17,
-    nacs: true,
   },
   {
     id: "hyundai-ioniq6",
@@ -117,7 +115,6 @@ export const EV_DATABASE: EVModel[] = [
     rangeMiles: 319,
     maxChargekW: 240,
     efficiencyMilesPerKwh: 3.8,
-    nacs: true,
   },
   {
     id: "kia-ev6-wind-awd-2022",
@@ -148,7 +145,6 @@ export const EV_DATABASE: EVModel[] = [
     rangeMiles: 295,
     maxChargekW: 240,
     efficiencyMilesPerKwh: 3.51,
-    nacs: true,
   },
   {
     id: "kia-ev6-awd",
@@ -169,7 +165,6 @@ export const EV_DATABASE: EVModel[] = [
     rangeMiles: 270,
     maxChargekW: 240,
     efficiencyMilesPerKwh: 3.21,
-    nacs: true,
   },
   {
     id: "kia-ev6-gt",
@@ -200,7 +195,6 @@ export const EV_DATABASE: EVModel[] = [
     rangeMiles: 280,
     maxChargekW: 210,
     efficiencyMilesPerKwh: 2.81,
-    nacs: true,
   },
   {
     id: "chevy-bolt-euv",
@@ -331,7 +325,6 @@ export const EV_DATABASE: EVModel[] = [
     rangeMiles: 288,
     maxChargekW: 150,
     efficiencyMilesPerKwh: 3.86,
-    nacs: true,
   },
 ];
 

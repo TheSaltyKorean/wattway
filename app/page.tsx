@@ -43,17 +43,20 @@ export default function Home() {
   // Storage can throw in restricted contexts — persistence is best-effort.
   useEffect(() => {
     try {
+      // One-time remap of legacy ids to their current-generation profile. The
+      // migrated flag is set on first run regardless of whether a car is saved,
+      // so a later fresh selection of an older-generation profile (which reuses a
+      // legacy id) is not remapped on the next load.
+      const alreadyMigrated = localStorage.getItem("wattway.evIdMigrated");
       let savedId = localStorage.getItem("wattway.evId");
+      if (savedId && !alreadyMigrated && EV_ID_MIGRATIONS[savedId]) {
+        savedId = EV_ID_MIGRATIONS[savedId];
+        try { localStorage.setItem("wattway.evId", savedId); } catch { /* best-effort */ }
+      }
+      if (!alreadyMigrated) {
+        try { localStorage.setItem("wattway.evIdMigrated", "1"); } catch { /* best-effort */ }
+      }
       if (savedId) {
-        // One-time remap of legacy ids to their current-generation profile
-        if (!localStorage.getItem("wattway.evIdMigrated")) {
-          const migrated = EV_ID_MIGRATIONS[savedId];
-          if (migrated) {
-            savedId = migrated;
-            try { localStorage.setItem("wattway.evId", savedId); } catch { /* best-effort */ }
-          }
-          try { localStorage.setItem("wattway.evIdMigrated", "1"); } catch { /* best-effort */ }
-        }
         const saved = getEVById(savedId);
         if (saved) setEV(saved);
       }
