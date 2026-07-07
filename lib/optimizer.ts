@@ -440,8 +440,26 @@ export function optimizeStops(
       ((1 - bestStop.progress) * routeDistanceMiles + bestStop.distanceFromRouteMiles) /
         ev.efficiencyMilesPerKwh +
       ((targetArrivalSoC / 100) + ARRIVAL_PAD_SOC) * fullBattery;
+    // Mid-trip we normally charge to 80% (fast-charging tapers hard above that),
+    // but if the next charger downstream is farther than an 80% charge can reach
+    // — a rural "charging desert" — charge enough to bridge that gap (up to the
+    // 95% cap) instead of stranding the plan with no reachable next stop. This is
+    // what let long routes (e.g. Seattle -> Key West) give up after a few stops.
+    const nextAhead = withProgress.find((s) => s.progress > bestStop.progress);
+    let midChargeKwh = CHARGE_TO_SOC * fullBattery;
+    if (nextAhead) {
+      const gapMiles =
+        (nextAhead.progress - bestStop.progress) * routeDistanceMiles +
+        nextAhead.distanceFromRouteMiles;
+      const kwhToReachNext =
+        gapMiles / ev.efficiencyMilesPerKwh + (MIN_SOC + ARRIVAL_PAD_SOC) * fullBattery;
+      midChargeKwh = Math.min(
+        MAX_CHARGE_SOC * fullBattery,
+        Math.max(CHARGE_TO_SOC * fullBattery, kwhToReachNext)
+      );
+    }
     const chargeTarget =
-      kwhForDest <= MAX_CHARGE_SOC * fullBattery ? kwhForDest : CHARGE_TO_SOC * fullBattery;
+      kwhForDest <= MAX_CHARGE_SOC * fullBattery ? kwhForDest : midChargeKwh;
     const kwhAdded = Math.max(0, chargeTarget - arrivalKwh);
 
     // Tiny/zero charge here usually means we arrived still near the 80% cap
