@@ -378,7 +378,17 @@ export default function Home() {
             >
               Legal Disclaimer
             </a>{" "}
-            · because u/tuctrohs is stupid and doesn&apos;t understand what an estimate is
+            · because{" "}
+            <a
+              href="https://www.reddit.com/user/tuctrohs"
+              target="_blank"
+              rel="noopener noreferrer"
+              onPointerDown={(e) => e.stopPropagation()}
+              className="underline hover:text-[var(--accent)] transition-colors"
+            >
+              u/tuctrohs
+            </a>{" "}
+            is stupid and doesn&apos;t understand what an estimate is
           </p>
         </div>
 

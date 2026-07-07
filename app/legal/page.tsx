@@ -21,8 +21,15 @@ export default function LegalPage() {
       <div className="mt-4 rounded-lg border border-[var(--border)] bg-[var(--surface-2)] p-4 text-sm">
         <p>
           <strong>Why this page exists:</strong> a Redditor going by{" "}
-          <em>u/tuctrohs</em> is stupid and doesn&apos;t understand what an
-          estimate is. He was absolutely certain that a free hobby app, made for
+          <a
+            href="https://www.reddit.com/user/tuctrohs"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="underline hover:text-[var(--accent)]"
+          >
+            u/tuctrohs
+          </a>{" "}
+          is stupid and doesn&apos;t understand what an estimate is. He was absolutely certain that a free hobby app, made for
           fun and given away for free, urgently needed a wall of legal boilerplate
           — because he genuinely could not grasp that a route <em>estimate</em> is
           an estimate, not a notarized guarantee. So here it is, in full, just for
