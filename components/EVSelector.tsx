@@ -69,7 +69,9 @@ export default function EVSelector({ value, onChange }: Props) {
     onChange(next);
   };
 
-  const invalid = isCustom && (current.batteryKwh <= 0 || current.rangeMiles <= 0);
+  const invalid =
+    isCustom &&
+    (current.batteryKwh <= 0 || current.rangeMiles <= 0 || current.maxChargekW <= 0);
 
   const numField = (
     label: string,
@@ -135,8 +137,11 @@ export default function EVSelector({ value, onChange }: Props) {
               onChange={(e) => setCustom({ teslaAccess: e.target.checked })}
               className="accent-[var(--accent)]"
             />
-            Tesla / NACS (Supercharger access)
+            This is a Tesla (full Supercharger access)
           </label>
+          <p className="text-[10px] text-[var(--text-muted)] -mt-1">
+            Non-Tesla NACS cars already get open Superchargers automatically.
+          </p>
           {invalid ? (
             <p className="text-[10px] text-amber-400">
               Enter a battery size and range above 0 to plan a route.
