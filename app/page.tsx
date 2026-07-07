@@ -276,6 +276,16 @@ export default function Home() {
             </svg>
             Donate via Venmo
           </a>
+          <p className="mt-3 text-center text-[11px] text-[var(--text-muted)]">
+            <a
+              href="/legal"
+              onPointerDown={(e) => e.stopPropagation()}
+              className="underline hover:text-[var(--accent)] transition-colors"
+            >
+              Legal Disclaimer
+            </a>{" "}
+            · estimates only, not guaranteed
+          </p>
         </div>
 
         {/* Form + results scroll together */}

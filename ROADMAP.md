@@ -66,6 +66,7 @@ Community feedback that shaped WattWay:
 - **u/iovnow** — requested the 2026 Toyota bZ FWD XLE Plus.
 - **u/Tymanthius** — suggested user-entered (custom) vehicle specs.
 - **u/dodiddle1987** — suggested an overnight/hotel slow-charge stop for cheaper rates.
+- **u/tuctrohs** — prompted adding a legal disclaimer / terms of use.
 - **u/rb_stlouis** — requested the Chevrolet Equinox EV FWD.
 - **u/diatonic** — requested the Volvo C40 Recharge (MY23).
 - **u/salted_grapes** — requested the 2026 Toyota bZ AWD.
