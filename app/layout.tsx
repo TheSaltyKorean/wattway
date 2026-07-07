@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import Analytics from "@/components/Analytics";
 
 const SITE_URL = "https://wattway.net/";
 const OG_DESCRIPTION =
@@ -61,15 +62,17 @@ export const viewport = {
 // object-src/base-uri. The Google-domain entries mirror Google's documented
 // Maps JS API allowlist (developers.google.com/maps/documentation/javascript/
 // content-security-policy) so no Maps code path — geocoding, Street View, other
-// regions, weekly builds — is blocked.
+// regions, weekly builds — is blocked. googletagmanager.com (gtag loader) and
+// google-analytics.com / analytics.google.com (GA4 collect beacons) are allowed
+// for the optional Google Analytics tag.
 // (frame-ancestors/sandbox are ignored in a meta CSP, so they're omitted.)
 const CSP = [
   "default-src 'self'",
-  "script-src 'self' 'unsafe-inline' 'unsafe-eval' blob: https://*.googleapis.com https://*.gstatic.com https://*.google.com https://*.ggpht.com https://*.googleusercontent.com",
+  "script-src 'self' 'unsafe-inline' 'unsafe-eval' blob: https://*.googleapis.com https://*.gstatic.com https://*.google.com https://*.ggpht.com https://*.googleusercontent.com https://www.googletagmanager.com",
   "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
   "font-src 'self' data: https://fonts.gstatic.com",
-  "img-src 'self' data: blob: https://*.googleapis.com https://*.gstatic.com https://*.google.com https://*.ggpht.com https://*.googleusercontent.com",
-  "connect-src 'self' https://*.googleapis.com https://*.gstatic.com https://*.google.com https://api.openchargemap.io https://ipapi.co data: blob:",
+  "img-src 'self' data: blob: https://*.googleapis.com https://*.gstatic.com https://*.google.com https://*.ggpht.com https://*.googleusercontent.com https://*.google-analytics.com https://www.googletagmanager.com",
+  "connect-src 'self' https://*.googleapis.com https://*.gstatic.com https://*.google.com https://api.openchargemap.io https://ipapi.co https://*.google-analytics.com https://*.analytics.google.com https://www.googletagmanager.com data: blob:",
   "worker-src 'self' blob:",
   "frame-src 'self' https://*.google.com",
   "object-src 'none'",
@@ -86,7 +89,10 @@ export default function RootLayout({
       <head>
         <meta httpEquiv="Content-Security-Policy" content={CSP} />
       </head>
-      <body className="antialiased">{children}</body>
+      <body className="antialiased">
+        {children}
+        <Analytics />
+      </body>
     </html>
   );
 }

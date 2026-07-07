@@ -32,6 +32,9 @@ jobs:
           GITHUB_PAGES: "true"
           NEXT_PUBLIC_GOOGLE_MAPS_KEY: ${{ secrets.GOOGLE_MAPS_KEY }}
           NEXT_PUBLIC_OCM_API_KEY: ${{ secrets.OCM_API_KEY }}
+          # Optional Google Analytics 4 measurement id (G-XXXXXXXX). If the
+          # GA_ID secret is unset the tag is inert (see components/Analytics.tsx).
+          NEXT_PUBLIC_GA_ID: ${{ secrets.GA_ID }}
       - uses: actions/upload-pages-artifact@v3
         with:
           path: out

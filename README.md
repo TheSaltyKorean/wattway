@@ -59,6 +59,9 @@ Keys are NOT committed. For local dev copy `.env.local.example` to `.env.local`;
 **Open Charge Map** (`NEXT_PUBLIC_OCM_API_KEY`) — [openchargemap.org](https://openchargemap.org/site/develop/api)
 - **Required** (anonymous access was discontinued); free signup
 
+**Google Analytics 4** (`NEXT_PUBLIC_GA_ID`) — *optional*
+- Set to a `G-XXXXXXXX` measurement id to enable analytics; leave blank to disable. In the Pages deploy it comes from the `GA_ID` Actions secret.
+
 > Both keys are `NEXT_PUBLIC_` and ship in the browser bundle — that's inherent to a client-side maps app. The referrer restriction is what protects the Google key.
 
 ### 3. Run (dev)
