@@ -16,6 +16,8 @@ const MapView = dynamic(() => import("@/components/MapView"), { ssr: false });
 export interface ViaStop {
   id: number;
   wp: Waypoint | null;
+  arrivalSoC?: number; // min battery % desired on arrival at this stop
+  rechargedHere?: boolean; // car is fully recharged here (hotel / destination / L2)
 }
 
 type PanelMode = "left" | "right" | "floating";
@@ -158,7 +160,13 @@ export default function Home() {
       const result = await planTrip({
         origin,
         destination,
-        waypoints: vias.map((v) => v.wp).filter((w): w is Waypoint => w !== null),
+        waypoints: vias
+          .map((v): Waypoint | null =>
+            v.wp
+              ? { ...v.wp, arrivalSoC: v.arrivalSoC, rechargedHere: v.rechargedHere }
+              : null
+          )
+          .filter((w): w is Waypoint => w !== null),
         ev,
         startingSoC,
         targetArrivalSoC: arrivalSoC,

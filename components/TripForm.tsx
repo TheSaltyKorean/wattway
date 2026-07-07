@@ -266,6 +266,8 @@ export default function TripForm({
   const removeVia = (id: number) => onViasChange(vias.filter((v) => v.id !== id));
   const setVia = (id: number, wp: Waypoint | null) =>
     onViasChange(vias.map((v) => (v.id === id ? { ...v, wp } : v)));
+  const setViaField = (id: number, patch: Partial<ViaStop>) =>
+    onViasChange(vias.map((v) => (v.id === id ? { ...v, ...patch } : v)));
 
   // Bumped on swap so both fields re-display their (exchanged) values
   const [fillSignal, setFillSignal] = useState(0);
@@ -305,6 +307,41 @@ export default function TripForm({
             placeholder="City or address along the way"
             onRemove={() => removeVia(via.id)}
           />
+          {via.wp && (
+            <div className="flex items-center gap-4 mt-1.5 pl-1 text-xs">
+              <label className="flex items-center gap-1.5 text-[var(--text-muted)] cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  checked={!!via.rechargedHere}
+                  onChange={(e) => setViaField(via.id, { rechargedHere: e.target.checked })}
+                  className="accent-[var(--accent)]"
+                />
+                Charged here
+              </label>
+              {!via.rechargedHere && (
+                <label className="flex items-center gap-1.5 text-[var(--text-muted)]">
+                  Arrive with ≥
+                  <input
+                    type="number"
+                    min={0}
+                    max={90}
+                    value={via.arrivalSoC ?? ""}
+                    placeholder="—"
+                    onChange={(e) =>
+                      setViaField(via.id, {
+                        arrivalSoC:
+                          e.target.value === ""
+                            ? undefined
+                            : Math.max(0, Math.min(90, Number(e.target.value))),
+                      })
+                    }
+                    className="w-12 bg-[var(--surface-2)] border border-[var(--border)] rounded px-1.5 py-0.5 text-[var(--text)] tabular-nums"
+                  />
+                  %
+                </label>
+              )}
+            </div>
+          )}
         </div>
       ))}
 

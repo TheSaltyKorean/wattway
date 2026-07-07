@@ -19,6 +19,9 @@ export interface Coordinates {
 export interface Waypoint {
   coords: Coordinates;
   address: string;
+  // Optional per-via routing hints (ignored on origin/destination):
+  arrivalSoC?: number; // min battery % desired on arrival at this via stop
+  rechargedHere?: boolean; // treat as a full recharge (hotel / destination / L2)
 }
 
 export interface ChargerStation {

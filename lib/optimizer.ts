@@ -5,6 +5,7 @@ import {
   MembershipPlan,
   TripInput,
   TripPlan,
+  Waypoint,
 } from "./types";
 import { decodePolyline } from "./googlePolyline";
 import type { LineString } from "geojson";
@@ -514,6 +515,72 @@ export function optimizeStops(
   return { stops, arrivalSoC, finalLegMiles: Math.round(finalRemainingMiles), planIncomplete };
 }
 
+// When vias carry per-stop settings (a min arrival SoC, or "recharged here"),
+// plan each leg between vias separately: chain the battery state across legs,
+// enforce each via's arrival target, and reset to a full battery at a via the
+// user marked "charged here" (hotel / destination / overnight L2).
+function optimizeStopsMultiLeg(
+  routeCoords: Coordinates[],
+  routeDistanceMiles: number,
+  stations: ChargerStation[],
+  input: TripInput,
+  vias: Waypoint[]
+): { stops: ChargingStop[]; arrivalSoC: number; finalLegMiles: number; planIncomplete: boolean } {
+  // Cumulative straight-line distance along the polyline, used to place vias.
+  const cum: number[] = [0];
+  for (let i = 1; i < routeCoords.length; i++) {
+    cum[i] = cum[i - 1] + haversine(routeCoords[i - 1], routeCoords[i]);
+  }
+  const total = cum[cum.length - 1] || 1;
+
+  // Nearest polyline index for each via (the route passes through them), forced
+  // strictly increasing so legs stay in order and non-empty.
+  let prev = 0;
+  const viaIdx = vias.map((w) => {
+    let best = Math.min(prev + 1, routeCoords.length - 2);
+    let bd = Infinity;
+    for (let i = prev + 1; i < routeCoords.length - 1; i++) {
+      const d = haversine(w.coords, routeCoords[i]);
+      if (d < bd) { bd = d; best = i; }
+    }
+    prev = best;
+    return best;
+  });
+
+  const bounds = [0, ...viaIdx, routeCoords.length - 1];
+  let soc = input.startingSoC;
+  const allStops: ChargingStop[] = [];
+  let planIncomplete = false;
+  let arrivalSoC = soc;
+  let finalLegMiles = 0;
+  for (let k = 0; k < bounds.length - 1; k++) {
+    const a = bounds[k];
+    const b = bounds[k + 1];
+    if (b <= a) continue;
+    const legCoords = routeCoords.slice(a, b + 1);
+    const legDist = ((cum[b] - cum[a]) / total) * routeDistanceMiles;
+    const isLast = k === bounds.length - 2;
+    const endVia = isLast ? undefined : vias[k];
+    // Last leg uses the trip's arrival target; a mid-trip via uses its own min
+    // arrival SoC, or just "reach it" (MIN_SOC) if none was set.
+    const target = isLast
+      ? input.targetArrivalSoC
+      : endVia?.arrivalSoC ?? MIN_SOC * 100;
+    const legRes = optimizeStops(legCoords, legDist, stations, {
+      ...input,
+      startingSoC: soc,
+      targetArrivalSoC: target,
+    });
+    allStops.push(...legRes.stops);
+    planIncomplete = planIncomplete || legRes.planIncomplete;
+    arrivalSoC = legRes.arrivalSoC;
+    finalLegMiles = legRes.finalLegMiles;
+    // Carry the battery into the next leg — full if the user recharges here.
+    soc = endVia?.rechargedHere ? 100 : legRes.arrivalSoC;
+  }
+  return { stops: allStops, arrivalSoC, finalLegMiles, planIncomplete };
+}
+
 export async function planTrip(input: TripInput): Promise<TripPlan> {
   const googleKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_KEY!;
   const ocmKey = process.env.NEXT_PUBLIC_OCM_API_KEY;
@@ -531,7 +598,13 @@ export async function planTrip(input: TripInput): Promise<TripPlan> {
   );
 
   const stations = await fetchChargersAlongRoute(routeCoords, input.networkPrices, input.memberships ?? [], ocmKey);
-  const { stops, arrivalSoC, finalLegMiles, planIncomplete } = optimizeStops(routeCoords, distanceMiles, stations, input);
+  // Only plan leg-by-leg when a via actually carries a per-stop setting; plain
+  // via stops keep the single-pass behavior (identical results).
+  const vias = input.waypoints ?? [];
+  const hasViaSettings = vias.some((w) => w.rechargedHere || w.arrivalSoC != null);
+  const { stops, arrivalSoC, finalLegMiles, planIncomplete } = hasViaSettings
+    ? optimizeStopsMultiLeg(routeCoords, distanceMiles, stations, input, vias)
+    : optimizeStops(routeCoords, distanceMiles, stations, input);
 
   return {
     stops,
