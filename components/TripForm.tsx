@@ -268,6 +268,15 @@ export default function TripForm({
     onViasChange(vias.map((v) => (v.id === id ? { ...v, wp } : v)));
   const setViaField = (id: number, patch: Partial<ViaStop>) =>
     onViasChange(vias.map((v) => (v.id === id ? { ...v, ...patch } : v)));
+  // Reorder a stop so users can slot a newly-added stop between existing ones
+  const moveVia = (id: number, dir: -1 | 1) => {
+    const idx = vias.findIndex((v) => v.id === id);
+    const j = idx + dir;
+    if (idx < 0 || j < 0 || j >= vias.length) return;
+    const next = [...vias];
+    [next[idx], next[j]] = [next[j], next[idx]];
+    onViasChange(next);
+  };
 
   // Bumped on swap so both fields re-display their (exchanged) values
   const [fillSignal, setFillSignal] = useState(0);
@@ -307,8 +316,32 @@ export default function TripForm({
             placeholder="City or address along the way"
             onRemove={() => removeVia(via.id)}
           />
-          {via.wp && (
+          {(via.wp || vias.length > 1) && (
             <div className="flex items-center gap-4 mt-1.5 pl-1 text-xs">
+              {vias.length > 1 && (
+                <div className="flex items-center gap-1 text-[var(--text-muted)]">
+                  <button
+                    type="button"
+                    onClick={() => moveVia(via.id, -1)}
+                    disabled={i === 0}
+                    aria-label={`Move stop ${i + 1} up`}
+                    className="hover:text-[var(--accent)] disabled:opacity-30 transition-colors"
+                  >
+                    ↑
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => moveVia(via.id, 1)}
+                    disabled={i === vias.length - 1}
+                    aria-label={`Move stop ${i + 1} down`}
+                    className="hover:text-[var(--accent)] disabled:opacity-30 transition-colors"
+                  >
+                    ↓
+                  </button>
+                </div>
+              )}
+              {via.wp && (
+                <>
               <label className="flex items-center gap-1.5 text-[var(--text-muted)] cursor-pointer select-none">
                 <input
                   type="checkbox"
@@ -339,6 +372,8 @@ export default function TripForm({
                   />
                   %
                 </label>
+              )}
+                </>
               )}
             </div>
           )}
