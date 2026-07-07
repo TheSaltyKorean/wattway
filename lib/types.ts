@@ -4,7 +4,7 @@ export interface EVModel {
   id: string;
   make: string;
   model: string;
-  year: number;
+  years: string; // model-year range covered by this profile, e.g. "2022-2024"
   batteryKwh: number;
   rangeMiles: number;
   maxChargekW: number;

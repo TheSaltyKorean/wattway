@@ -23,7 +23,7 @@ export default function EVSelector({ value, onChange }: Props) {
       >
         {EV_DATABASE.map((ev) => (
           <option key={ev.id} value={ev.id}>
-            {ev.make} {ev.model} ({ev.year}) — {ev.rangeMiles}mi
+            {ev.make} {ev.model} ({ev.years}) — {ev.rangeMiles}mi
           </option>
         ))}
       </select>
