@@ -105,9 +105,9 @@ export default function EVSelector({ value, onChange }: Props) {
             const base = loadSavedCustom();
             onChange({
               ...base,
-              // Switching from a Tesla always grants access, even if a saved
-              // custom profile previously had it off.
-              teslaAccess: current.make === "Tesla" || base.teslaAccess === true,
+              // Don't infer Tesla access from the previously selected vehicle —
+              // the user picks the "This is a Tesla" checkbox explicitly.
+              teslaAccess: base.teslaAccess === true,
             });
             return;
           }
