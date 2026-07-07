@@ -103,7 +103,9 @@ export default function EVSelector({ value, onChange }: Props) {
             const base = loadSavedCustom();
             onChange({
               ...base,
-              teslaAccess: base.teslaAccess ?? current.make === "Tesla",
+              // Switching from a Tesla always grants access, even if a saved
+              // custom profile previously had it off.
+              teslaAccess: current.make === "Tesla" || base.teslaAccess === true,
             });
             return;
           }

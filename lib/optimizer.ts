@@ -443,7 +443,7 @@ export function optimizeStops(
       // Supercharger records with no operator data may be Tesla-only; for
       // non-Tesla EVs deprioritize heavily rather than exclude, since many
       // are NACS-open sites with incomplete community data
-      if (ev.make !== "Tesla" && candidate.network === "Default" && /supercharger/i.test(candidate.name)) {
+      if (!teslaEligible && candidate.network === "Default" && /supercharger/i.test(candidate.name)) {
         score += 0.20;
       }
       if (arrivalFrac < COMFORT_ARRIVAL_SOC) score += LOW_ARRIVAL_PENALTY;
