@@ -413,7 +413,10 @@ export function optimizeStops(
       if (effectiveKw < 100) score += SLOW_CHARGER_PENALTY * 2;
       else if (effectiveKw < 150) score += SLOW_CHARGER_PENALTY;
       if (candidate.fastPortCount < 2) score += 0.08; // single plug = queue/outage risk
-      if (!candidate.recentlyVerified) score += 0.05;
+      // Small nudge only — "not recently verified" on OCM often just means nobody
+      // checked in lately (real networks like IONNA show up unverified), so this
+      // must not cancel a genuine price advantage (e.g. a $0.05/kWh-cheaper site).
+      if (!candidate.recentlyVerified) score += 0.02;
       // Supercharger records with no operator data may be Tesla-only; for
       // non-Tesla EVs deprioritize heavily rather than exclude, since many
       // are NACS-open sites with incomplete community data
