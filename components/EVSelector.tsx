@@ -10,7 +10,6 @@ interface Props {
 
 const CUSTOM = "Custom";
 
-// Sensible starting point when switching into custom mode.
 const CUSTOM_DEFAULT: EVModel = {
   id: "custom",
   make: CUSTOM,
@@ -21,6 +20,22 @@ const CUSTOM_DEFAULT: EVModel = {
   maxChargekW: 150,
   efficiencyMilesPerKwh: 3.73,
 };
+
+// Restore the user's last-entered custom specs (falls back to defaults).
+function loadSavedCustom(): EVModel {
+  try {
+    const raw = localStorage.getItem("wattway.customEv");
+    if (raw) {
+      const c = JSON.parse(raw);
+      if (c && typeof c.batteryKwh === "number" && c.batteryKwh > 0) {
+        return { ...CUSTOM_DEFAULT, ...c, id: "custom", make: CUSTOM };
+      }
+    }
+  } catch {
+    /* storage unavailable */
+  }
+  return CUSTOM_DEFAULT;
+}
 
 // Two cascading dropdowns (Make -> Model), plus a "Custom" make that lets the
 // user type their own battery / range / charge specs — real-world numbers can
@@ -45,7 +60,7 @@ export default function EVSelector({ value, onChange }: Props) {
 
   // Update one custom field, re-deriving efficiency (range / usable battery).
   const setCustom = (patch: Partial<EVModel>) => {
-    const base = isCustom ? current : CUSTOM_DEFAULT;
+    const base = isCustom ? current : loadSavedCustom();
     const next = { ...base, ...patch, id: "custom", make: CUSTOM };
     next.efficiencyMilesPerKwh =
       next.rangeMiles > 0 && next.batteryKwh > 0
@@ -53,6 +68,8 @@ export default function EVSelector({ value, onChange }: Props) {
         : 0;
     onChange(next);
   };
+
+  const invalid = isCustom && (current.batteryKwh <= 0 || current.rangeMiles <= 0);
 
   const numField = (
     label: string,
@@ -81,7 +98,13 @@ export default function EVSelector({ value, onChange }: Props) {
         value={isCustom ? CUSTOM : current.make}
         onChange={(e) => {
           if (e.target.value === CUSTOM) {
-            setCustom({});
+            // Restore saved custom specs; keep Supercharger access if switching
+            // from a Tesla so a Tesla owner's custom profile stays eligible.
+            const base = loadSavedCustom();
+            onChange({
+              ...base,
+              teslaAccess: base.teslaAccess ?? current.make === "Tesla",
+            });
             return;
           }
           const first = EV_DATABASE.find((v) => v.make === e.target.value);
@@ -103,9 +126,24 @@ export default function EVSelector({ value, onChange }: Props) {
             {numField("Range mi", current.rangeMiles, "rangeMiles")}
             {numField("Max kW", current.maxChargekW, "maxChargekW")}
           </div>
-          <p className="text-[10px] text-[var(--text-muted)]">
-            Enter your car&apos;s real numbers ({current.efficiencyMilesPerKwh || 0} mi/kWh).
-          </p>
+          <label className="flex items-center gap-2 text-xs text-[var(--text-muted)] cursor-pointer select-none">
+            <input
+              type="checkbox"
+              checked={!!current.teslaAccess}
+              onChange={(e) => setCustom({ teslaAccess: e.target.checked })}
+              className="accent-[var(--accent)]"
+            />
+            Tesla / NACS (Supercharger access)
+          </label>
+          {invalid ? (
+            <p className="text-[10px] text-amber-400">
+              Enter a battery size and range above 0 to plan a route.
+            </p>
+          ) : (
+            <p className="text-[10px] text-[var(--text-muted)]">
+              Your car&apos;s real numbers ({current.efficiencyMilesPerKwh} mi/kWh).
+            </p>
+          )}
         </div>
       ) : (
         <select

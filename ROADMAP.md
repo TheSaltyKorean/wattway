@@ -52,6 +52,9 @@ community feedback comes in (Reddit, Show HN, GitHub issues).
 - Warn when a route still requires a ferry — Google's `avoidFerries` is a
   preference, not a guarantee, so surface a notice when the returned route still
   crosses water instead of silently treating ferry miles as drivable
+- **Overnight / hotel slow-charge stop** — let a stop trade a longer dwell time
+  (e.g. a hotel overnight on slower L2/AC) for a cheaper per-kWh rate, and factor
+  that into the cost optimization. _(requested by u/dodiddle1987.)_
 
 ## 🙏 Thanks
 Community feedback that shaped WattWay:
@@ -59,6 +62,10 @@ Community feedback that shaped WattWay:
   requested per-stop leftover-charge targets.
 - **u/element1311** — suggested cross-referencing charger reliability with
   PlugShare ratings.
+- **u/ChrisRohn** — requested older model years (2020 IONIQ Electric, 2017 Bolt EV).
+- **u/iovnow** — requested the 2026 Toyota bZ FWD XLE Plus.
+- **u/Tymanthius** — suggested user-entered (custom) vehicle specs.
+- **u/dodiddle1987** — suggested an overnight/hotel slow-charge stop for cheaper rates.
 - **u/rb_stlouis** — requested the Chevrolet Equinox EV FWD.
 - **u/diatonic** — requested the Volvo C40 Recharge (MY23).
 - **u/salted_grapes** — requested the 2026 Toyota bZ AWD.

@@ -212,7 +212,10 @@ export default function Home() {
     }
   }, [origin, destination, vias, ev, startingSoC, arrivalSoC, membershipIds, avoidFerries, avoidTolls, excludedNetworks]);
 
-  const canPlan = origin && destination && !loading;
+  // A custom vehicle with a zero/blank battery or range would make the route
+  // math divide by zero, so require positive specs before planning.
+  const evValid = ev.batteryKwh > 0 && ev.rangeMiles > 0 && ev.efficiencyMilesPerKwh > 0;
+  const canPlan = origin && destination && !loading && evValid;
 
   // Single persistent panel element moved via CSS (order / fixed positioning)
   // so TripForm never remounts — remounting would blank the uncontrolled

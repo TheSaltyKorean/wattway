@@ -9,6 +9,9 @@ export interface EVModel {
   rangeMiles: number;
   maxChargekW: number;
   efficiencyMilesPerKwh: number;
+  // Custom vehicles set this to keep Tesla Supercharger eligibility (catalog
+  // Teslas are detected by make === "Tesla").
+  teslaAccess?: boolean;
 }
 
 export interface Coordinates {

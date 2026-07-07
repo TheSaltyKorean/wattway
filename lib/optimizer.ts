@@ -180,7 +180,10 @@ export async function fetchChargersAlongRoute(
   routeCoords: Coordinates[],
   networkPrices: Record<string, number>,
   memberships: MembershipPlan[],
-  ocmApiKey?: string
+  ocmApiKey?: string,
+  // Minimum DC power to consider. Defaults to 50 kW, but a low-power EV (e.g. a
+  // 40 kW e-Golf) shouldn't have same-speed chargers filtered out.
+  minPowerKw: number = 50
 ): Promise<ChargerStation[]> {
   // Split the route into segments of at most SEGMENT_MILES (interpolating cut
   // points — vertex snapping can leave gaps), then query each segment's
@@ -279,11 +282,11 @@ export async function fetchChargersAlongRoute(
     if (poi.Connections) {
       for (const conn of poi.Connections) {
         if (conn.PowerKW && conn.PowerKW > maxPower) maxPower = conn.PowerKW;
-        if (conn.PowerKW && conn.PowerKW >= 50) fastPortCount += conn.Quantity ?? 1;
+        if (conn.PowerKW && conn.PowerKW >= minPowerKw) fastPortCount += conn.Quantity ?? 1;
         if (conn.ConnectionType?.Title) connectorTypes.push(conn.ConnectionType.Title);
       }
     }
-    if (maxPower < 50) continue;
+    if (maxPower < minPowerKw) continue;
 
     // Use OCM's published UsageCost first, fall back to network defaults.
     // OCM often lacks OperatorInfo, so match against the station name too.
@@ -370,7 +373,10 @@ export function optimizeStops(
     // substring matching them would wrongly drop stations named "Touch"/"Couch".
     return !excluded.some((e) => (e ? (e.length < 4 ? net === e : hay.includes(e)) : false));
   };
-  const usable = (ev.make === "Tesla"
+  // Catalog Teslas (make === "Tesla") and custom vehicles flagged with Tesla
+  // access can use Tesla-operated Superchargers; others only OPEN Supercharger sites.
+  const teslaEligible = ev.make === "Tesla" || ev.teslaAccess === true;
+  const usable = (teslaEligible
     ? stations
     : stations.filter((s) => {
         const n = s.network.toLowerCase();
@@ -638,7 +644,13 @@ export async function planTrip(input: TripInput): Promise<TripPlan> {
     ([lng, lat]) => ({ lat, lng })
   );
 
-  const stations = await fetchChargersAlongRoute(routeCoords, input.networkPrices, input.memberships ?? [], ocmKey);
+  const stations = await fetchChargersAlongRoute(
+    routeCoords,
+    input.networkPrices,
+    input.memberships ?? [],
+    ocmKey,
+    Math.min(50, input.ev.maxChargekW)
+  );
   // Only plan leg-by-leg when a via actually carries a per-stop setting; plain
   // via stops keep the single-pass behavior (identical results).
   const vias = input.waypoints ?? [];
