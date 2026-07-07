@@ -616,6 +616,8 @@ export const DEFAULT_NETWORK_PRICES: Record<string, number> = {
   // the daytime (higher) tier so we don't overstate savings. These are per-kWh;
   // per-minute municipal networks (e.g. Austin Energy) can't be modeled here.
   "Seattle City Light": 0.32,
+  "Tacoma Power": 0.21,
+  "OUC": 0.20,
   "Default": 0.45,
 };
 
