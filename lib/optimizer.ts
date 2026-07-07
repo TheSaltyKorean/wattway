@@ -364,8 +364,11 @@ export function optimizeStops(
   const excluded = (input.excludedNetworks ?? []).map((n) => n.toLowerCase());
   const notExcluded = (s: ChargerStation) => {
     if (excluded.length === 0) return true;
+    const net = s.network.toLowerCase();
     const hay = `${s.network} ${s.name}`.toLowerCase();
-    return !excluded.some((e) => e && hay.includes(e));
+    // Short keys (e.g. "OUC") must match the operator title exactly — fuzzy
+    // substring matching them would wrongly drop stations named "Touch"/"Couch".
+    return !excluded.some((e) => (e ? (e.length < 4 ? net === e : hay.includes(e)) : false));
   };
   const usable = (ev.make === "Tesla"
     ? stations
@@ -608,6 +611,10 @@ function optimizeStopsMultiLeg(
     arrivalSoC = legRes.arrivalSoC;
     // Carry the battery into the next leg — full if the user recharges here.
     soc = endVia?.rechargedHere ? 100 : legRes.arrivalSoC;
+    // A full recharge at this via also resets the "miles since last charge"
+    // counter — pre-hotel miles were driven on the previous charge, so they
+    // must not inflate the first fast-charge stop after the recharge.
+    if (endVia?.rechargedHere) carryMiles = 0;
   }
   return { stops: allStops, arrivalSoC, finalLegMiles: carryMiles, planIncomplete };
 }
