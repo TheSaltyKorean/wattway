@@ -8,7 +8,9 @@
   --surface-2: #1a1a24;
   --border: #2a2a38;
   --text: #e8e8f0;
-  --text-muted: #7070a0;
+  /* Brightened from #7070a0 (~3.6:1 on --surface-2, below WCAG AA) so the small
+     secondary text in charging-stop cards is legible in dark mode. ~5.5:1 now. */
+  --text-muted: #9494c0;
   --accent: #4ade80;
   --accent-dim: #166534;
 }
