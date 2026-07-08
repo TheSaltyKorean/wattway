@@ -127,16 +127,6 @@ export const EV_DATABASE: EVModel[] = [
     efficiencyMilesPerKwh: 2.82,
   },
   {
-    id: "hyundai-ioniq9-std",
-    make: "Hyundai",
-    model: "IONIQ 9 SR",
-    years: "2026",
-    batteryKwh: 88.3,
-    rangeMiles: 280,
-    maxChargekW: 350,
-    efficiencyMilesPerKwh: 3.17,
-  },
-  {
     id: "hyundai-ioniq6",
     make: "Hyundai",
     model: "IONIQ 6 LR",
