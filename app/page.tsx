@@ -34,6 +34,17 @@ const EV_ID_MIGRATIONS: Record<string, string> = {
   "vw-id4-pro": "vw-id4-pro-2024",
 };
 
+// Ids for profiles that were removed outright because the config never existed
+// (e.g. a phantom trim) and are NOT reused by any current profile. Unlike the
+// generation-split remaps above, these are always safe to apply and must NOT be
+// gated on the one-time migration flag — returning users already have that flag
+// set, so a gated remap would never reach them and they'd silently fall back to
+// the default car. Applied unconditionally on every load.
+const REMOVED_EV_ID_REMAP: Record<string, string> = {
+  // Phantom 88.3 kWh IONIQ 9 "SR" (no US config) -> the real base S RWD.
+  "hyundai-ioniq9-std": "hyundai-ioniq9-lr-rwd",
+};
+
 export default function Home() {
   const [origin, setOrigin] = useState<Waypoint | null>(null);
   const [destination, setDestination] = useState<Waypoint | null>(null);
@@ -53,6 +64,13 @@ export default function Home() {
       // legacy id) is not remapped on the next load.
       const alreadyMigrated = localStorage.getItem("wattway.evIdMigrated");
       let savedId = localStorage.getItem("wattway.evId");
+      // Always remap ids for removed/phantom profiles, regardless of the
+      // one-time flag (those ids are never reused, so there's no risk of
+      // bumping a deliberately re-selected legacy profile).
+      if (savedId && REMOVED_EV_ID_REMAP[savedId]) {
+        savedId = REMOVED_EV_ID_REMAP[savedId];
+        try { localStorage.setItem("wattway.evId", savedId); } catch { /* best-effort */ }
+      }
       if (savedId && !alreadyMigrated && EV_ID_MIGRATIONS[savedId]) {
         savedId = EV_ID_MIGRATIONS[savedId];
         try { localStorage.setItem("wattway.evId", savedId); } catch { /* best-effort */ }
