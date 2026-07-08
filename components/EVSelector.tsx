@@ -10,6 +10,21 @@ interface Props {
 
 const CUSTOM = "Custom";
 
+// Alphabetical, numeric-aware ordering so "IONIQ 5" < "IONIQ 6" < "IONIQ 9"
+// and "EQB 300" < "EQE 350" sort the way a human reads them.
+const collator = new Intl.Collator(undefined, {
+  numeric: true,
+  sensitivity: "base",
+});
+
+// Variants of one make, sorted by model name then model-year range.
+function sortedVariantsFor(make: string): EVModel[] {
+  return EV_DATABASE.filter((e) => e.make === make).sort(
+    (a, b) =>
+      collator.compare(a.model, b.model) || collator.compare(a.years, b.years)
+  );
+}
+
 const CUSTOM_DEFAULT: EVModel = {
   id: "custom",
   make: CUSTOM,
@@ -45,13 +60,15 @@ export default function EVSelector({ value, onChange }: Props) {
   const isCustom = current.id === "custom";
 
   const makes = useMemo(
-    () => [...Array.from(new Set(EV_DATABASE.map((e) => e.make))), CUSTOM],
+    () => [
+      ...Array.from(new Set(EV_DATABASE.map((e) => e.make))).sort((a, b) =>
+        collator.compare(a, b)
+      ),
+      CUSTOM,
+    ],
     []
   );
-  const variants = useMemo(
-    () => EV_DATABASE.filter((e) => e.make === current.make),
-    [current.make]
-  );
+  const variants = useMemo(() => sortedVariantsFor(current.make), [current.make]);
 
   const selectClass =
     "w-full bg-[var(--surface-2)] border border-[var(--border)] text-[var(--text)] rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-[var(--accent)] transition-colors";
@@ -111,7 +128,7 @@ export default function EVSelector({ value, onChange }: Props) {
             });
             return;
           }
-          const first = EV_DATABASE.find((v) => v.make === e.target.value);
+          const first = sortedVariantsFor(e.target.value)[0];
           if (first) onChange(first);
         }}
         className={selectClass}
