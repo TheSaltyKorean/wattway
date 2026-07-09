@@ -14,6 +14,9 @@ export const metadata: Metadata = {
   title: "WattWay — Cost-Optimized EV Trip Planner",
   description:
     "Plan your EV road trip with the cheapest possible charging stops. WattWay finds the optimal charging sequence so you spend less time and money on the road.",
+  // Self-referencing canonical so search/AI crawlers index one URL for the home
+  // page (resolves against metadataBase to https://wattway.net/).
+  alternates: { canonical: "/" },
   // Relative URLs so they resolve under a base path (e.g. GitHub Pages /wattway)
   icons: { icon: "icon-192.png", apple: "icon-192.png" },
   manifest: "manifest.json",
@@ -79,6 +82,29 @@ const CSP = [
   "base-uri 'self'",
 ].join("; ");
 
+// Schema.org structured data so search engines and AI answer engines can
+// understand what WattWay is, that it's a free web app, and what it does. This
+// is a STATIC, developer-authored constant with no user input, so serializing
+// it into the JSON-LD script tag is not an XSS vector.
+const STRUCTURED_DATA = {
+  "@context": "https://schema.org",
+  "@type": ["WebApplication", "SoftwareApplication"],
+  name: "WattWay",
+  url: SITE_URL,
+  description: OG_DESCRIPTION,
+  applicationCategory: "TravelApplication",
+  operatingSystem: "Any (web browser)",
+  browserRequirements: "Requires JavaScript.",
+  isAccessibleForFree: true,
+  offers: { "@type": "Offer", price: "0", priceCurrency: "USD" },
+  featureList: [
+    "Cost-optimized EV charging stops along a road-trip route",
+    "Live charging-network pricing and membership-aware cost estimates",
+    "~170 EV profiles plus custom vehicle battery/range/charge specs",
+    "Charger power and reliability factored into stop selection",
+  ],
+};
+
 export default function RootLayout({
   children,
 }: {
@@ -88,6 +114,11 @@ export default function RootLayout({
     <html lang="en">
       <head>
         <meta httpEquiv="Content-Security-Policy" content={CSP} />
+        {/* JSON-LD from a static trusted constant (no user input) — safe to inline. */}
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(STRUCTURED_DATA) }}
+        />
       </head>
       <body className="antialiased">
         {children}

@@ -1,0 +1,19 @@
+# WattWay
+
+> WattWay is a free, cost-optimized EV road-trip charging planner. Given an origin and destination, it finds the cheapest realistic sequence of charging stops for a specific electric vehicle — using live charging-network prices, the driver's memberships, each charger's power and reliability, and the car's real-world range.
+
+WattWay runs entirely in the browser as a static site: there is no account, no login, and no server that stores user data. Routing, geocoding, and place search come from the Google Maps Platform; charger locations, connector types, power levels, and pricing come from Open Charge Map (a community-edited database). Every number WattWay shows — cost, range, energy used, charge time, number and location of stops, arrival state of charge — is a model-based estimate, not a quote or a measurement. See the legal disclaimer for the full data and accuracy notice.
+
+## Key facts
+
+- **What it does**: Plans an EV road trip to minimize total charging cost and time by choosing an optimal, minimal set of charging stops along the route.
+- **How it differs from a generic map**: It optimizes for total charging *cost* — not just "any charger nearby" — factoring in each network's pricing, the driver's membership plans, charger speed (kW), and reliability, plus the vehicle's usable battery and range.
+- **Vehicles supported**: ~170 EV profiles (make, model, year, battery capacity, EPA range, max charge rate), plus a custom-vehicle option for entering real-world battery/range/charge specs.
+- **Cost to use**: Free. No sign-up or account required.
+- **Privacy**: Runs client-side. The selected vehicle, memberships, excluded networks, and custom specs are stored locally in the browser; origin/destination are sent to Google and Open Charge Map only to compute the route and find chargers.
+- **Coverage**: Charger data is strongest where Open Charge Map's community data is complete; availability and pricing should always be confirmed with the charging network before travel.
+
+## Pages
+
+- [WattWay trip planner](https://wattway.net/): The main tool — enter an origin, destination, and vehicle to get a cost-optimized charging plan with stops, costs, and charge times.
+- [Legal disclaimer & terms](https://wattway.net/legal): Estimates-only notice, third-party data sources (Google Maps Platform, Open Charge Map), privacy notice, and terms of use.

@@ -4,6 +4,7 @@ import type { Metadata } from "next";
 export const metadata: Metadata = {
   title: "Legal Disclaimer — WattWay",
   description: "Legal disclaimer, terms of use, and data notice for WattWay.",
+  alternates: { canonical: "/legal" },
 };
 
 export default function LegalPage() {
