@@ -67,15 +67,18 @@ export const viewport = {
 // content-security-policy) so no Maps code path — geocoding, Street View, other
 // regions, weekly builds — is blocked. googletagmanager.com (gtag loader) and
 // google-analytics.com / analytics.google.com (GA4 collect beacons) are allowed
-// for the optional Google Analytics tag.
+// for the optional Google Analytics tag. static.cloudflareinsights.com (the
+// Cloudflare Web Analytics beacon script) and cloudflareinsights.com (its RUM
+// POST endpoint) are allowed for Cloudflare's analytics, which the CDN injects
+// when the site is proxied through Cloudflare.
 // (frame-ancestors/sandbox are ignored in a meta CSP, so they're omitted.)
 const CSP = [
   "default-src 'self'",
-  "script-src 'self' 'unsafe-inline' 'unsafe-eval' blob: https://*.googleapis.com https://*.gstatic.com https://*.google.com https://*.ggpht.com https://*.googleusercontent.com https://www.googletagmanager.com",
+  "script-src 'self' 'unsafe-inline' 'unsafe-eval' blob: https://*.googleapis.com https://*.gstatic.com https://*.google.com https://*.ggpht.com https://*.googleusercontent.com https://www.googletagmanager.com https://static.cloudflareinsights.com",
   "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
   "font-src 'self' data: https://fonts.gstatic.com",
   "img-src 'self' data: blob: https://*.googleapis.com https://*.gstatic.com https://*.google.com https://*.ggpht.com https://*.googleusercontent.com https://*.google-analytics.com https://www.googletagmanager.com",
-  "connect-src 'self' https://*.googleapis.com https://*.gstatic.com https://*.google.com https://api.openchargemap.io https://ipapi.co https://*.google-analytics.com https://*.analytics.google.com https://www.googletagmanager.com data: blob:",
+  "connect-src 'self' https://*.googleapis.com https://*.gstatic.com https://*.google.com https://api.openchargemap.io https://ipapi.co https://*.google-analytics.com https://*.analytics.google.com https://www.googletagmanager.com https://cloudflareinsights.com data: blob:",
   "worker-src 'self' blob:",
   "frame-src 'self' https://*.google.com",
   "object-src 'none'",
@@ -119,10 +122,11 @@ export default function RootLayout({
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(STRUCTURED_DATA) }}
         />
+        {/* Canonical gtag snippet in <head> so Google's tag detector finds it. */}
+        <Analytics />
       </head>
       <body className="antialiased">
         {children}
-        <Analytics />
       </body>
     </html>
   );
