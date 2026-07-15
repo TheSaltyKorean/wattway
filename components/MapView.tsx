@@ -118,7 +118,12 @@ export default function MapView({ plan }: Props) {
               return d;
             };
 
-            const root = el("div", "min-width:200px;font-family:system-ui,sans-serif;font-size:13px");
+            // Google's InfoWindow bubble is white, but the page's global text
+            // color (--text) is near-white for the dark theme and would be
+            // inherited here, rendering the content invisible. Pin an explicit
+            // dark color on the root so all children read as dark (the opacity
+            // rules below then mute to readable grey over white).
+            const root = el("div", "min-width:200px;font-family:system-ui,sans-serif;font-size:13px;color:#1a1a1a");
             root.append(
               el("p", "font-weight:600;margin:0 0 4px", stop.station.name),
               el("p", "margin:0 0 2px;opacity:0.7", stop.station.network + (stop.station.priceIsPublished ? " ✓" : "")),
