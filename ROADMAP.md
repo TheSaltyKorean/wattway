@@ -43,6 +43,23 @@ community feedback comes in (Reddit, Show HN, GitHub issues).
   for now only per-kWh municipal networks are priced. _(surfaced by u/Upset_Region8582.)_
 - _(add new requests here as they arrive)_
 
+## 🏗️ Platform epics (big, re-platforming)
+These are not incremental features — they require moving WattWay from a static,
+client-only web app to a native-app + backend product on an open-maps stack. Fully
+scoped in [docs/platform-evolution-crowdsourced-pricing-and-obd.md](docs/platform-evolution-crowdsourced-pricing-and-obd.md).
+- **Crowdsourced pricing (time-of-day + surge aware)** — community-reported,
+  verified charging prices that capture energy/time/session/idle fees, membership
+  context, time-of-use schedules, and dynamic/surge pricing. Needs native capture
+  (geofence prompts, price-screen OCR), user accounts + moderation, and a
+  time-series backend.
+- **OBD / telematics integration** — read real SoC, range, charge power, and
+  odometer from the car (cloud telematics APIs first, OBD-II BLE dongle later) to
+  replace estimates and auto-capture charging-session prices.
+- **Enabling work:** move off Google Maps to an open-maps stack (MapLibre + OSM /
+  Protomaps tiles / Valhalla routing / Photon geocoding); stand up a real backend
+  (Postgres + PostGIS + time-series), accounts, and hosting; ship native apps
+  (React Native + Expo) sharing the TypeScript domain core.
+
 ## 🔭 Planned / exploring
 - Real-time charger availability (Google Places `evChargeOptions` — live
   `availableCount` / `outOfServiceCount` for participating networks)
