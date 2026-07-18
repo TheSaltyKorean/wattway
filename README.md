@@ -113,6 +113,19 @@ Real prices vary by site, time of day, and state. Published OCM rates override t
 - [ ] Share trip link
 - [ ] Mobile PWA
 
+### Platform epics (re-platforming required)
+
+Bigger bets that would take WattWay beyond a static client-only site — fully
+scoped in [docs/platform-evolution-crowdsourced-pricing-and-obd.md](docs/platform-evolution-crowdsourced-pricing-and-obd.md):
+
+- [ ] **Crowdsourced pricing (time-of-day + surge aware)** — community-reported,
+  verified charging prices capturing energy/time/session/idle fees, membership
+  context, time-of-use schedules, and dynamic/surge pricing
+- [ ] **OBD / telematics integration** — read live state of charge, range, charge
+  power, and odometer from the car to replace estimates and auto-capture session prices
+- [ ] **Enabling work** — move off Google Maps to an open-maps stack (MapLibre +
+  OSM), stand up a backend + accounts, and ship native apps (React Native)
+
 ## About
 
 Built by **TheSaltyKorean** — more at [thesaltykorean.com](https://thesaltykorean.com).
