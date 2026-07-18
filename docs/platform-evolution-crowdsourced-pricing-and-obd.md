@@ -1,334 +1,237 @@
-# Platform Evolution — Crowdsourced Pricing & OBD Integration
+# Crowdsourced Pricing & OBD Integration
 
-> **Status:** Backlog epic. Not scheduled. This is a scoping/planning document, not
-> a commitment. Created 2026-07-18.
->
-> **TL;DR:** Two headline features — (A) crowdsourced charging prices that capture
-> time-of-day and surge pricing, and (B) live vehicle data via OBD/telematics —
-> cannot be built on WattWay's current architecture (a static, client-only web app
-> on GitHub Pages). Together they require re-platforming into a **native app + web**
-> product backed by a **real server, database, and user accounts**, and moving the
-> map layer from **Google Maps to an open-maps (OpenStreetMap) stack**. This
-> document lays out everything that would need to happen, why, and in what order.
+> **Status:** Backlog epic — a scoping/planning document, not a commitment or a
+> schedule. Created 2026-07-18.
 
----
+This document is organized around four questions:
 
-## 1. Why the current architecture can't do this
-
-Today WattWay is:
-
-- **Next.js static export → GitHub Pages.** No server, no database, no backend
-  logic. Everything runs in the visitor's browser.
-- **Google Maps Platform** for map render, routing, geocoding, places (a single
-  HTTP-referrer-restricted browser key).
-- **Open Charge Map** read-only for charger locations and whatever pricing it has.
-- **No user accounts, no identity, no persistence** beyond `localStorage`.
-- **Effectively $0/month** to run (within Google's trial credit / free tiers).
-
-The two requested features each break one or more of those constraints:
-
-| Requirement | Why the static/client-only model fails |
-|---|---|
-| Receive & store price submissions from users | No backend to POST to; no database to hold them. |
-| Trust / reputation / anti-abuse | No user identity, so no way to weight or moderate contributions. |
-| Time-of-day + surge pricing | Needs a time-series datastore and server-side aggregation, not static JSON. |
-| Capture prices at the charger (photo OCR, geofence prompts, background) | Browsers can't do reliable background geolocation, BLE, or app-store-grade capture UX. |
-| Read the car (OBD / telematics) | Needs native Bluetooth (dongles) or server-side OAuth to automaker cloud APIs. |
-| Store/derive map + pricing data at scale | Google Maps ToS restricts caching/storing/deriving map data, and per-call cost scales badly for a data-collection product. |
-
-**Conclusion:** these are not incremental features on the current app. They are the
-motivation to graduate WattWay into a proper product with a backend, accounts,
-native apps, and an owned map stack. The rest of this document scopes that.
+1. **[What we want to solve for](#1-what-we-want-to-solve-for)** — the goal.
+2. **[What the problem is](#2-what-the-problem-is)** — why WattWay can't do it today.
+3. **[The features](#3-the-features)** — what we'd actually build.
+4. **[What needs to happen](#4-what-needs-to-happen)** — the work required to get there.
 
 ---
 
-## 2. Feature A — Crowdsourced pricing (time-of-day + surge aware)
+## 1. What we want to solve for
 
-### 2.1 Goal
+**We want WattWay to tell you the *real* price of charging on your trip, based on
+your *real* car — not an estimate.**
 
-Replace the current static/estimated pricing (OCM published price + per-network
-fallback) with **real, current, community-verified prices** that reflect how
-charging is actually billed — including that the price **changes with time of day
-and with demand**.
+Today WattWay is very good at *routing*: given your car and a destination, it finds
+the cheapest realistic sequence of stops. But two things it relies on are guesses:
 
-### 2.2 The hard part: pricing is not one number
+- **The price at each charger.** We use whatever Open Charge Map has recorded, and
+  fall back to per-network average rates. Those averages don't know that a station
+  charges more at 6pm than at 2am, or that prices spike when demand is high.
+- **The state of your car.** We ask you to tell us your battery level and we assume
+  a typical efficiency. We can't see the actual charge, the real range in today's
+  weather, or how the specific car actually consumes energy.
 
-An accurate price model has to represent, per charger + connector + membership:
+The goal is to close both gaps:
 
-- **Energy rate** — $/kWh.
-- **Time rate** — $/minute (some networks bill by time, not energy; effective
-  $/kWh then depends on charger power — already a known roadmap gap for municipal
-  networks).
-- **Session / connection fee** — flat per-session charge.
-- **Idle fee** — $/minute after charging completes.
-- **Minimums, taxes, surcharges.**
-- **Membership / plan context** — the same plug costs different amounts on
-  pay-as-you-go vs a paid subscription; WattWay already models memberships, so
-  submissions must be tagged with which plan they were observed under.
-- **Time-of-use (TOU) schedules** — price varies by hour-of-day / day-of-week
-  (common for utility and some networks).
-- **Surge / dynamic pricing** — real-time demand-based pricing (e.g. some EVgo
-  markets). This is **ephemeral** — a value observed at 5pm Friday may not hold an
-  hour later — so it must be stored as time-stamped observations and modeled
-  statistically, never as a single fixed rate.
-- **Currency, connector type, power level, effective/expiry dates.**
+- **Prices that are real and current** — reported by the people actually charging,
+  and aware that price changes with **time of day** and with **demand (surge)**.
+- **A car that reports itself** — pull the true state of charge, range, and charging
+  power straight from the vehicle, so the plan starts from reality instead of a form.
 
-### 2.3 Data model sketch
-
-Two layers:
-
-1. **Price observation** (immutable, append-only, one row per report):
-   `id, charger_id, connector_type, power_kw, observed_at (timestamp),
-   submitted_by (user), membership_context, currency, energy_per_kwh,
-   time_per_min, session_fee, idle_fee, source (manual | photo_ocr | telematics |
-   network_api), photo_ref, geo (lat/lng at submission for fraud checks),
-   confidence, verification_state`.
-
-2. **Derived schedule / estimate** (computed, read-optimized):
-   aggregate observations into a per-(charger, connector, membership) estimate,
-   bucketed by **hour-of-week** for TOU, plus a **recent-window live estimate** for
-   surge. Use robust stats (median, MAD-based outlier rejection), decay old data,
-   and expose a **confidence + freshness** signal to the UI.
-
-Storage: **PostgreSQL + PostGIS** (geo) with either **TimescaleDB** or partitioned
-tables for the time-series of observations.
-
-### 2.4 Crowdsourcing mechanics
-
-- **Capture flows (best done natively — see §5):**
-  - Geofence prompt: "You're at *Buck-ee's #62* — confirm/enter the price?"
-  - **Photo of the price screen + OCR** to reduce typing and fraud.
-  - Manual entry.
-  - **Automatic post-session import** from OBD/telematics (Feature B) — detect a
-    charging session ended, prompt to attach the price → highest-quality data.
-- **Validation & trust:** cross-check against official network pricing where a feed
-  exists; outlier rejection; dedup near-simultaneous reports; per-user reputation;
-  geo-sanity (submitter was actually near the charger).
-- **Moderation & anti-abuse:** accounts, rate limits, flagging, an admin review
-  queue, ban/rollback tooling. Crowdsourced data invites spam and vandalism —
-  this is ongoing operational work, not a one-time build.
-- **Cold-start / incentives:** with no contributors there is no data and no value.
-  Seed from OCM + any network APIs; consider gamification (contributor badges,
-  leaderboards), and make WattWay's own routing quality the draw that attracts the
-  users who then contribute.
+The payoff: trip estimates you can trust, and a pricing dataset that gets better
+every time someone uses the app.
 
 ---
 
-## 3. Feature B — OBD / telematics integration
+## 2. What the problem is
 
-### 3.1 Goal
+WattWay was deliberately built as a **static website** — no server, no database, no
+accounts. Your browser does everything, and the whole thing costs almost nothing to
+run. That design is perfect for a routing tool. It's the wrong shape for the two
+features above, for concrete reasons:
 
-Replace *estimates* with the car's *real* data: actual state of charge, real
-consumption, true range, charging power, battery temperature, odometer. This both
-improves the plan (start from the real SoC, calibrate the consumption model to the
-actual car) and **feeds Feature A** (auto-detect charging sessions to attach
-prices).
+- **There's nowhere to send a price report.** Collecting prices from users means
+  receiving data, storing it, and serving it back. A static site has no server to
+  receive it and no database to keep it.
+- **There's no way to know who's reporting.** Crowdsourced data only works if you
+  can weight trustworthy contributors, catch abuse, and moderate bad entries. That
+  needs user accounts and identity — which we don't have.
+- **Prices that change over time need a different kind of storage.** "This station
+  costs $0.45" is a single value. "This station costs $0.31 overnight, $0.55 at
+  peak, and surges when it's busy" is a *time series* that has to be collected and
+  averaged on a server.
+- **The browser can't capture prices well.** The best way to collect accurate
+  prices is at the charger — a prompt when you arrive, a photo of the price screen,
+  a reading pulled automatically after a charging session. Those need reliable
+  background location, the camera, and Bluetooth in a way only a real mobile app
+  can deliver.
+- **The browser can't read the car.** Talking to an OBD dongle needs Bluetooth;
+  pulling data from the automaker's cloud needs a secure server-side login. Neither
+  is possible from a static web page.
+- **The map platform doesn't fit a data product.** Google Maps bills per call and
+  its terms restrict storing and building on top of its data. A product that
+  constantly loads maps for lots of app users and builds its own charger/pricing
+  database is a poor fit for that model.
 
-### 3.2 Two integration paths (not mutually exclusive)
-
-| Path | What it is | Pros | Cons |
-|---|---|---|---|
-| **Cloud telematics API** (Smartcar, Enode, Tesla Fleet API, automaker APIs) | User OAuths into their automaker account; we read standardized data server-side | No hardware; standardized SoC/odometer/charge state/location; works from the backend | Per-vehicle coverage gaps; per-call or per-vehicle cost; depends on automaker cooperation |
-| **Direct OBD-II dongle** (ELM327 BLE) | App talks Bluetooth to a plug-in dongle | Cheap hardware; works offline; real-time | **EV SoC/battery PIDs are manufacturer-proprietary** and mostly *not* on the standard OBD-II PID set — requires per-make reverse engineering; needs native BLE (native app only) |
-
-**Recommendation:** lead with **cloud telematics (Smartcar/Enode-style
-aggregator)** for breadth and because it works from the server; treat the **OBD
-dongle** as a later power-user path for makes/models the aggregators don't cover.
-
-### 3.3 What we'd read
-
-SoC %, usable battery capacity / health, estimated range, charging status + power,
-odometer, GPS location, battery/cabin temperature.
-
-### 3.4 Uses
-
-- Seed the trip with the **real current SoC** instead of asking the user.
-- **Calibrate the consumption model** to the specific car's observed efficiency.
-- **Detect charging sessions** → prompt for / auto-attach a price observation.
-- Validate range assumptions against reality over time.
-
-### 3.5 Privacy, security, consent (non-negotiable)
-
-Vehicle location + telematics is **sensitive personal data**. Requires: explicit,
-revocable, per-scope consent; encryption in transit and at rest; strict retention
-limits; a clear privacy policy and app-store privacy labels; and compliance review
-(GDPR/CCPA-style). Getting this wrong is a legal and trust failure, not a bug.
+**In short:** these aren't features we can bolt onto the current app. They're the
+reason to grow WattWay into a proper product — a mobile app plus the website, backed
+by a real server and accounts, on a map platform we can build on.
 
 ---
 
-## 4. Re-platforming I — Open maps (off Google)
+## 3. The features
 
-### 4.1 Why leave Google Maps
+### 3.1 Crowdsourced pricing (time-of-day + surge aware)
 
-- **Cost at data-collection scale** — a product that constantly loads maps and
-  routes for many native-app users, plus geocoding of every submission, scales
-  Google's per-call billing badly.
-- **ToS on storing/caching/deriving** map data conflicts with building our own
-  charger + pricing database on top of it.
-- **Native SDK licensing** and the desire for **offline tiles** and self-hosting.
+**What the user gets:** charging prices that are real, current, and community-
+verified — and that reflect *when* you'll actually be plugging in.
 
-### 4.2 Proposed open stack
+The reason this is hard is that a charging price isn't one number. To be accurate,
+each price has to capture:
 
-| Layer | Option(s) | Notes |
+- **How you're billed** — per kWh, per minute, a flat session fee, an idle fee for
+  staying plugged in after you're done, plus taxes and minimums.
+- **Your plan** — the same plug costs different amounts on pay-as-you-go versus a
+  paid membership (WattWay already models memberships, so reports must note which
+  plan they were seen under).
+- **The time** — many networks and utilities charge different rates by hour of day
+  and day of week.
+- **Demand** — some networks use live surge pricing, so a price seen at 5pm on a
+  Friday may not hold an hour later. These have to be stored as time-stamped
+  observations and turned into a statistical estimate, never a single fixed rate.
+
+**How people would contribute** (best done in a mobile app — see §4):
+
+- A prompt when you arrive at a charger: "You're at *Buck-ee's #62* — confirm the
+  price?"
+- A **photo of the price screen** that the app reads automatically (less typing,
+  harder to fake).
+- Manual entry.
+- **Automatic capture after a charging session** — if the car is connected
+  (Feature 3.2), detect that a session ended and offer to attach the price. This is
+  the highest-quality source.
+
+**How we keep it trustworthy:** cross-check against official network prices where we
+have them, reject outliers, remove duplicates, score each contributor's reliability,
+and run a moderation queue for flagged entries. This is ongoing work, not a one-time
+build — open contribution invites spam.
+
+**The catch:** with no contributors there's no data and no value ("cold start"). We'd
+seed from existing sources and lean on WattWay's routing quality to attract the users
+who then contribute.
+
+### 3.2 OBD / telematics integration
+
+**What the user gets:** WattWay reads the car directly — real state of charge, real
+range, charging power, odometer — so the plan starts from your actual battery
+instead of a number you typed, and adapts to how your specific car really drives.
+
+There are two ways to connect a car, and they're not mutually exclusive:
+
+- **Through the automaker's cloud (recommended first).** You log in once to your
+  car's account through a service like Smartcar or Enode, and WattWay reads
+  standardized data from the server. No hardware, works across many brands. Downsides
+  are per-vehicle coverage gaps and a per-use cost.
+- **Through an OBD-II Bluetooth dongle (later).** A cheap adapter plugs into the car
+  and the app talks to it directly. Works offline and in real time, but EV battery
+  data isn't part of the standard OBD set — it's proprietary and different for every
+  make — so this needs per-brand work and a mobile app for Bluetooth.
+
+Beyond starting the trip from the real battery level, connecting the car also lets us
+**calibrate the estimate to how your car actually consumes energy** and **detect
+charging sessions to auto-capture prices** for Feature 3.1.
+
+**Non-negotiable:** a car's location and telematics are sensitive personal data.
+This requires explicit, revocable consent; encryption; strict limits on what we keep
+and for how long; a clear privacy policy; and app-store privacy disclosures.
+
+---
+
+## 4. What needs to happen
+
+Delivering the two features means three pieces of platform work plus a shared code
+foundation. None of it is a weekend project; the point of listing it is to be honest
+about scope.
+
+### 4.1 Move off Google Maps to an open-maps stack
+
+A data-collection product that loads maps for many app users fits an owned,
+open-maps stack better than Google's per-call billing and storage restrictions.
+
+| Layer | Proposed | Why |
 |---|---|---|
-| **Rendering** | MapLibre GL JS (web) / MapLibre Native (React Native) | Open fork of Mapbox GL; shared style across web + native |
-| **Tiles** | OpenStreetMap data via **Protomaps** (single `.pmtiles` file, very cheap to host) or MapTiler / self-hosted | Vector tiles |
-| **Routing** | **Valhalla** (costing model, elevation-aware, good for EV-style routing) / OSRM / GraphHopper | Eventually want **range-aware** routing |
-| **Geocoding / autocomplete** | **Photon** (OSM) or **Pelias** | Nominatim has a strict usage policy; self-host for volume |
-| **Elevation** | Open DEM (SRTM / Copernicus) | Feeds the consumption model (climb/descent) |
+| Map rendering | **MapLibre** (web + native) | Open, one style across web and app |
+| Map tiles | **OpenStreetMap** data via **Protomaps** or MapTiler | Cheap to host, self-serve |
+| Routing | **Valhalla** (or OSRM / GraphHopper) | Costing model suits EV-style, range-aware routing |
+| Search / geocoding | **Photon** or Pelias | OSM-based address search |
 
-### 4.3 Licensing
+Trade-off to go in eyes-open: Google's place quality, business data, and live
+traffic are hard to match, so expect a quality dip in search/places and plan to
+blend sources and let users correct data. There's also a licensing decision — OSM's
+ODbL terms carry attribution and "share-alike" obligations that affect how our own
+pricing database can be licensed.
 
-OpenStreetMap is **ODbL** — requires attribution and has **share-alike**
-implications for a *derived database*. This forces an explicit decision about how
-our **crowdsourced pricing database** is licensed and whether/how it is shared
-back. Legal review needed before launch.
+### 4.2 Stand up a real backend and user accounts
 
-### 4.4 Parity gaps vs Google
+This is what makes crowdsourcing possible at all:
 
-Be honest about regressions: Google's place quality, POI coverage, business data,
-and live traffic are hard to match. Expect a quality dip in geocoding/places and
-plan mitigations (blend sources, let users correct data).
+- **A server + API** to receive price reports, serve pricing, and run the app's
+  logic (TypeScript, to reuse what we have).
+- **A database** built for geography and time — PostgreSQL with PostGIS, plus a
+  time-series layer for the stream of price observations.
+- **User accounts** (sign in with Apple/Google/email) so we can do reputation and
+  moderation.
+- **Storage** for price-screen photos, **background jobs** for aggregation and
+  moderation, plus the usual hosting, backups, and monitoring.
 
----
+This is the biggest change in character: WattWay goes from **~$0/month** to a real
+recurring cost (server, database, telematics fees, map hosting, developer accounts).
+That ties directly to monetization — the product needs a revenue model to be
+sustainable, whereas the current static site does not.
 
-## 5. Re-platforming II — Hosting & backend
+### 4.3 Ship native mobile apps
 
-### 5.1 From static Pages → a real service
+The best price-capture and the OBD dongle path both need a real mobile app —
+Bluetooth, reliable background location, the camera, and push notifications aren't
+available to a website. The plan is **React Native (with Expo)** so we reuse the
+existing TypeScript/React work and share logic between web and app, with MapLibre for
+maps. This also brings app-store realities: developer accounts, review cycles, and
+privacy disclosures for location and vehicle data.
 
-Everything above needs a server. Proposed shape (chosen to reuse the current
-TypeScript skill set and keep scope contained):
+### 4.4 Extract a shared core (do this first)
 
-| Concern | Proposal |
-|---|---|
-| **API** | TypeScript service (Fastify / NestJS), or a managed backend to compress scope |
-| **Database** | PostgreSQL + PostGIS + TimescaleDB (or partitioned tables) for price observations |
-| **Auth / accounts** | OAuth (Sign in with Apple / Google) + email; needed for reputation & moderation. Managed (Supabase Auth / Clerk / Auth0) to start |
-| **Object storage** | Price-screen photos (S3-compatible) |
-| **Background jobs** | Aggregation, telematics polling, moderation queue, data decay |
-| **Hosting** | Managed PaaS (Fly.io / Render / Railway) or a cloud provider; **Supabase** (Postgres + Auth + storage + edge functions) is worth evaluating to collapse several boxes into one |
-| **Ops** | Secrets management, backups, observability/logging, CI/CD, staging env |
-
-### 5.2 Cost implications
-
-This moves WattWay from **~$0/month** to a **real recurring cost floor** (server +
-managed DB + object storage + telematics API fees + map tile hosting +
-Apple/Google developer accounts). That directly ties into the earlier
-**monetization** discussion (app-store distribution + ads / subscription) — the
-crowdsourcing/OBD product needs a revenue model to be sustainable, whereas the
-current static site does not.
+Before any of the above, pull WattWay's pure logic — the **optimizer**, the **EV
+database**, and the **cost model** — into a standalone TypeScript package that both
+the website and the future mobile app use. It's low-risk, it's useful on its own, and
+everything else builds on it. This is the natural first step.
 
 ---
 
-## 6. Re-platforming III — Native apps
+## A suggested order
 
-### 6.1 Why native is required
+Sequenced so the current free website keeps working the whole time and the biggest
+risks are retired early:
 
-- **BLE** for OBD dongles.
-- **Reliable background geolocation / geofencing** for "you're at a charger" prompts.
-- **Camera + on-device OCR** for price-screen capture.
-- **Push notifications.**
-- App-store **distribution and trust** (and the ability to charge / show ads).
+1. **Foundations** — extract the shared core (§4.4); decide data licensing; pick the
+   backend and telematics providers.
+2. **Backend + open maps on the website** — stand up the server, database, and
+   accounts, and migrate the *website* off Google Maps to MapLibre/OSM. This proves
+   out the map move with no mobile work.
+3. **Crowdsourced pricing MVP** — manual price entry and moderation on the website,
+   plus the first mobile app; basic per-charger pricing.
+4. **Native capture + connected car** — arrival prompts, price-screen photo reading,
+   and cloud telematics; auto-detect sessions to attach prices.
+5. **Time-of-day + surge + OBD dongle** — model temporal and surge pricing, add the
+   dongle path for uncovered cars, and move to range-aware routing.
 
-### 6.2 Framework
-
-**React Native + Expo** — reuses the existing TypeScript/React skills and lets us
-**share the domain core** (optimizer, EV database, cost model) between web and
-native. **MapLibre Native** provides maps. (Alternative: Flutter, but that means a
-full rewrite in Dart and no code reuse.)
-
-### 6.3 Shared core
-
-Extract the pure-TypeScript domain logic — the **optimizer**, **`evDatabase`**, and
-**cost model** — into a standalone package consumed by both the Next.js web app and
-the React Native app. This is valuable refactoring work that also de-risks the web
-app, and it's a sensible **Phase 0** step regardless of the rest.
-
-### 6.4 App-store realities
-
-Apple Developer Program **$99/yr**, Google Play **$25 one-time**; app review
-cycles; **privacy nutrition labels** (location + vehicle data will draw scrutiny);
-slower update cadence than pushing to a static site.
+The cheapest slice that delivers real value on its own is **step 1 plus the
+website-only open-maps migration in step 2** — it de-risks the largest platform change
+without any mobile or crowdsourcing work.
 
 ---
 
-## 7. Target architecture (state we'd be building toward)
+## Open questions
 
-```
-  ┌─────────────┐     ┌──────────────────┐
-  │  Web (Next) │     │ Native app (RN + │
-  │  MapLibre GL│     │ MapLibre Native) │
-  └──────┬──────┘     └────────┬─────────┘
-         │   shared TS core (optimizer, EV DB, cost model)
-         └──────────┬──────────┘
-                    │  HTTPS API
-             ┌──────▼───────┐
-             │  Backend API │  auth · submissions · aggregation · moderation
-             └──┬────────┬──┘
-                │        │
-     ┌──────────▼──┐  ┌──▼─────────────┐
-     │ Postgres    │  │ Object storage │  (price-screen photos)
-     │ PostGIS +   │  └────────────────┘
-     │ Timescale   │
-     └─────────────┘
-                │  integrations
-   ┌────────────┼──────────────┬───────────────┐
-   ▼            ▼              ▼               ▼
- OSM tiles   Routing      Telematics       Open Charge Map
- (Protomaps) (Valhalla)   (Smartcar/…)   + network price APIs
-```
-
----
-
-## 8. Phasing / roadmap
-
-Sequenced to de-risk and to keep the current free web app working throughout.
-
-- **Phase 0 — Foundations (no user-visible change):** extract the shared TS domain
-  core into a package; decide **data licensing** (ODbL implications, pricing-DB
-  license); pick the backend + telematics stack.
-- **Phase 1 — Backend + open maps on web:** stand up the server, DB, and accounts;
-  migrate the **web app off Google Maps to the MapLibre/OSM stack** (de-risks the
-  map move without any native work). Read-only pricing served from the API.
-- **Phase 2 — Crowdsourced pricing MVP:** manual price entry + moderation on web,
-  plus the **first React Native app**; basic per-charger aggregate pricing.
-- **Phase 3 — Native capture + telematics:** geofence prompts, photo OCR, and
-  **cloud telematics (Smartcar-style)** integration; auto-detect sessions to
-  attach prices.
-- **Phase 4 — Temporal pricing + OBD dongle + smarter routing:** time-of-day and
-  surge modeling; the OBD-II dongle path for uncovered makes; range-aware routing
-  on Valhalla.
-
----
-
-## 9. Open questions / decisions needed
-
-- **Data licensing:** is the crowdsourced pricing DB open (share-alike, community
-  goodwill) or proprietary (a moat, but ODbL constraints from OSM apply)?
-- **Telematics vs dongle priority** and which aggregator.
-- **Budget / hosting appetite** — moving off $0 static hosting.
-- **Monetization** to fund recurring cost (ties to the app-store + ads discussion).
-- **Maintenance capacity** — moderation and abuse handling are ongoing, not one-off.
-
----
-
-## 10. Risks
-
-- **Cold-start:** no contributors → no pricing data → no added value. The single
-  biggest risk.
-- **Surge pricing is ephemeral** and hard to represent trustworthily.
-- **EV OBD PID fragmentation** — proprietary, per-make, inconsistent.
-- **OSM parity gaps** vs Google places/traffic/coverage.
-- **Moderation / abuse burden** scales with success.
-- **Cost sustainability** — real monthly floor vs today's ~$0.
-- **App-store review** scrutiny for location + vehicle data.
-
----
-
-## 11. Rough effort signal
-
-This is a **multi-quarter, multi-workstream program**, not a feature. The cheapest
-independently-valuable slice is **Phase 0 + the web-only open-maps migration
-(Phase 1 maps)**, which can be done without any native or crowdsourcing work and
-de-risks the biggest platform change. Everything past Phase 1 assumes a sustained
-build + operate commitment and a funding model to match.
+- **Data licensing** — is the crowdsourced pricing database open (community goodwill,
+  share-alike) or proprietary (a moat, but OSM's terms constrain it)?
+- **Connected-car priority** — cloud telematics vs. the OBD dongle, and which
+  provider.
+- **Budget** — appetite for moving off $0 static hosting to a real cost floor.
+- **Monetization** — the revenue model that funds the running costs.
+- **Capacity** — moderation and abuse handling are continuous, not one-off.
