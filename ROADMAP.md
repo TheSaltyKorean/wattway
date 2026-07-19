@@ -43,10 +43,11 @@ community feedback comes in (Reddit, Show HN, GitHub issues).
   for now only per-kWh municipal networks are priced. _(surfaced by u/Upset_Region8582.)_
 - _(add new requests here as they arrive)_
 
-## 🏗️ Platform epics (big, re-platforming)
-These are not incremental features — they require moving WattWay from a static,
-client-only web app to a native-app + backend product on an open-maps stack. Fully
-scoped in [docs/platform-evolution-crowdsourced-pricing-and-obd.md](docs/platform-evolution-crowdsourced-pricing-and-obd.md).
+## 🌱 Possible spin-off app (NOT WattWay itself)
+WattWay stays a lightweight, free, static routing tool. These two ideas would turn it
+into a data platform with a backend and accounts, so they'd be built as a **separate
+app forked from WattWay's core**, leaving WattWay unchanged. Fully scoped in
+[docs/platform-evolution-crowdsourced-pricing-and-obd.md](docs/platform-evolution-crowdsourced-pricing-and-obd.md).
 - **Crowdsourced pricing (time-of-day + surge aware)** — community-reported,
   verified charging prices that capture energy/time/session/idle fees, membership
   context, time-of-use schedules, and dynamic/surge pricing. Needs native capture
@@ -55,10 +56,10 @@ scoped in [docs/platform-evolution-crowdsourced-pricing-and-obd.md](docs/platfor
 - **OBD / telematics integration** — read real SoC, range, charge power, and
   odometer from the car (cloud telematics APIs first, OBD-II BLE dongle later) to
   replace estimates and auto-capture charging-session prices.
-- **Enabling work:** move off Google Maps to an open-maps stack (MapLibre + OSM /
-  Protomaps tiles / Valhalla routing / Photon geocoding); stand up a real backend
-  (Postgres + PostGIS + time-series), accounts, and hosting; ship native apps
-  (React Native + Expo) sharing the TypeScript domain core.
+- **Enabling work (in the spin-off, not WattWay):** open-maps stack (MapLibre + OSM /
+  Protomaps tiles / Valhalla routing / Photon geocoding); a real backend
+  (Postgres + PostGIS + time-series), accounts, and hosting; native apps
+  (React Native + Expo) sharing WattWay's TypeScript domain core.
 
 ## 🔭 Planned / exploring
 - Real-time charger availability (Google Places `evChargeOptions` — live
