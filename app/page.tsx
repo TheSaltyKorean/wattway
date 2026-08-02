@@ -11,6 +11,7 @@ import NetworkExcluder from "@/components/NetworkExcluder";
 import ChargingPlan from "@/components/ChargingPlan";
 import { getMembershipById } from "@/lib/memberships";
 import { useBusyCursor } from "@/lib/useBusyCursor";
+import { track } from "@/lib/analytics";
 
 const MapView = dynamic(() => import("@/components/MapView"), { ssr: false });
 
@@ -223,8 +224,20 @@ export default function Home() {
       });
       setPlan(result);
       setPlannedDestAddress(destination.address);
+      // Real "plans planned" signal for the usage report. Before this, plans
+      // were inferred from Routes API call counts, which double-count retries
+      // and miss nothing-but-also-tell-nothing about failures. Aggregate,
+      // non-identifying params only — no addresses or coordinates.
+      track("plan_trip", {
+        stops: result.stops.length,
+        distance_miles: Math.round(result.routeDistanceMiles),
+        via_count: vias.filter((v) => v.wp).length,
+        ev_id: ev.id,
+        plan_incomplete: result.planIncomplete,
+      });
     } catch (e) {
       setError(e instanceof Error ? e.message : "Something went wrong");
+      track("plan_trip_error");
     } finally {
       setLoading(false);
     }
