@@ -11,7 +11,7 @@ import NetworkExcluder from "@/components/NetworkExcluder";
 import ChargingPlan from "@/components/ChargingPlan";
 import { getMembershipById } from "@/lib/memberships";
 import { useBusyCursor } from "@/lib/useBusyCursor";
-import { track } from "@/lib/analytics";
+import { track, countPlan } from "@/lib/analytics";
 
 const MapView = dynamic(() => import("@/components/MapView"), { ssr: false });
 
@@ -228,6 +228,10 @@ export default function Home() {
       // were inferred from Routes API call counts, which double-count retries
       // and miss nothing-but-also-tell-nothing about failures. Aggregate,
       // non-identifying params only — no addresses or coordinates.
+      // Counted twice on purpose, because each source has a blind spot the
+      // other covers: GA4 carries the detail but dies to ad blockers, while the
+      // same-origin beacon is bare but unblockable.
+      countPlan();
       track("plan_trip", {
         stops: result.stops.length,
         distance_miles: Math.round(result.routeDistanceMiles),
