@@ -1,43 +1,59 @@
 # WattWay — https://wattway.net
 # Search crawlers and AI answer engines are welcome to index and cite WattWay.
+#
+# /api/ holds the plan-counter beacon (worker/plan-counter), which counts every
+# request it receives. There is nothing there to index, and a crawler hitting it
+# would inflate the plan count in the daily usage report.
+#
+# The Disallow is repeated in EVERY group on purpose. A crawler obeys only the
+# most specific group that matches its user-agent and ignores `User-agent: *`
+# entirely, so a named agent whose group omitted this line would still crawl
+# /api/ no matter what the wildcard group said.
 
 User-agent: *
 Allow: /
-# /api/ holds the plan-counter beacon (worker/plan-counter), which counts
-# requests. It has nothing to index, and a crawler hitting it would inflate the
-# plan count in the daily usage report.
 Disallow: /api/
 
 # AI assistants / answer engines (listed explicitly so the intent is unambiguous:
 # WattWay opts IN to being read and cited by these agents).
 User-agent: GPTBot
 Allow: /
+Disallow: /api/
 
 User-agent: OAI-SearchBot
 Allow: /
+Disallow: /api/
 
 User-agent: ChatGPT-User
 Allow: /
+Disallow: /api/
 
 User-agent: ClaudeBot
 Allow: /
+Disallow: /api/
 
 User-agent: Claude-Web
 Allow: /
+Disallow: /api/
 
 User-agent: anthropic-ai
 Allow: /
+Disallow: /api/
 
 User-agent: PerplexityBot
 Allow: /
+Disallow: /api/
 
 User-agent: Google-Extended
 Allow: /
+Disallow: /api/
 
 User-agent: Applebot-Extended
 Allow: /
+Disallow: /api/
 
 User-agent: CCBot
 Allow: /
+Disallow: /api/
 
 Sitemap: https://wattway.net/sitemap.xml
