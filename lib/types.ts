@@ -95,6 +95,8 @@ export interface TripInput {
   avoidFerries?: boolean;
   avoidTolls?: boolean;
   // Networks the user has opted out of — stations on these are excluded from
-  // planning (matched case-insensitively against the operator/name).
+  // planning (matched case-insensitively against the operator title; a
+  // station is matched against its name too only when OCM reports no
+  // operator at all).
   excludedNetworks?: string[];
 }

@@ -297,8 +297,13 @@ export async function fetchChargersAlongRoute(
     if (maxPower < minPowerKw) continue;
 
     // Use OCM's published UsageCost first, fall back to network defaults.
-    // OCM often lacks OperatorInfo, so match against the station name too.
-    const haystack = `${network} ${poi.AddressInfo.Title ?? ""}`.toLowerCase();
+    // OCM often lacks OperatorInfo ("Default") — only then fall back to
+    // matching the station name too. A station with a real, reported
+    // operator is matched on that title alone, so e.g. a non-Walmart
+    // charger sited in a Walmart lot doesn't get priced as Walmart's
+    // network just because its name mentions the lot (same guard used by
+    // notExcluded() in optimizeStops below).
+    const haystack = (network === "Default" ? `${network} ${poi.AddressInfo.Title ?? ""}` : network).toLowerCase();
     const publishedPrice = parseOCMPrice(poi.UsageCost ?? poi.AddressInfo?.UsageCost);
     const fallbackPrice = (() => {
       if (networkPrices[network] !== undefined && network !== "Default") return networkPrices[network];
