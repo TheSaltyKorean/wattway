@@ -316,14 +316,17 @@ export async function fetchChargersAlongRoute(
         if (key.length < 4) continue;
         if (haystack.includes(key.toLowerCase())) return price;
       }
-      if (haystack.includes("supercharger")) return networkPrices["Tesla"] ?? 0.40;
+      // Read the station name, not haystack (which omits the name for known
+      // operators), so a Supercharger hosted under an uncatalogued operator is
+      // priced as Tesla — matching the membership check below.
+      if (stationName.includes("supercharger")) return networkPrices["Tesla"] ?? 0.40;
       return networkPrices["Default"] ?? 0.45;
     })();
 
     // Apply member pricing for subscribed networks. The Tesla "supercharger"
-    // check reads the full station name, not haystack (which omits the name
-    // for known operators) — so a Supercharger hosted under a non-Tesla
-    // operator (e.g. Buc-ee's) still gets the Tesla member discount.
+    // check reads stationName for the same reason as the fallback above — so a
+    // Supercharger hosted under a non-Tesla operator (e.g. Buc-ee's) still gets
+    // the Tesla member discount.
     let effectivePrice = publishedPrice ?? fallbackPrice;
     for (const plan of memberships) {
       if (haystack.includes(plan.networkKey.toLowerCase()) ||
