@@ -176,6 +176,21 @@ export async function getRoute(
 const SEGMENT_MILES = 120;
 const SEGMENT_PARALLELISM = 4;
 
+// Resolve an already-lowercased operator title (or, for an operator-less POI,
+// its listing name) to a single catalogued network. The catalog is ordered and
+// the first match wins — "Electrify America - Walmart Supercenter" is Electrify
+// America, not Walmart. Pricing and exclusion both resolve through here so they
+// can't classify the same station as two different networks. Short keys (e.g.
+// "OUC") only match an exact operator title via the caller's direct lookup —
+// substring-matching them here would misfire on names like "touch"/"couch".
+function matchNetwork(haystack: string, networkKeys: string[]): string | null {
+  for (const key of networkKeys) {
+    if (key === "Default" || key.length < 4) continue;
+    if (haystack.includes(key.toLowerCase())) return key;
+  }
+  return null;
+}
+
 export async function fetchChargersAlongRoute(
   routeCoords: Coordinates[],
   networkPrices: Record<string, number>,
@@ -308,14 +323,8 @@ export async function fetchChargersAlongRoute(
     const publishedPrice = parseOCMPrice(poi.UsageCost ?? poi.AddressInfo?.UsageCost);
     const fallbackPrice = (() => {
       if (networkPrices[network] !== undefined && network !== "Default") return networkPrices[network];
-      for (const [key, price] of Object.entries(networkPrices)) {
-        if (key === "Default") continue;
-        // Short keys (e.g. "OUC") only match an exact operator title via the
-        // direct lookup above — substring-matching them would misprice unrelated
-        // names ("touch", "couch"), so skip them in the fuzzy fallback.
-        if (key.length < 4) continue;
-        if (haystack.includes(key.toLowerCase())) return price;
-      }
+      const matched = matchNetwork(haystack, Object.keys(networkPrices));
+      if (matched) return networkPrices[matched];
       // Read the station name, not haystack (which omits the name for known
       // operators), so a Supercharger hosted under an uncatalogued operator is
       // priced as Tesla — matching the membership check below.
@@ -383,18 +392,24 @@ export function optimizeStops(
   // non-Tesla (incl. NACS) EV use OPEN Supercharger sites while excluding
   // Tesla-only ones — so no separate NACS handling is needed here.
   // Networks the user opted out of. A station with a reported operator is
-  // matched against that operator title only — falling back to the station
-  // name too (as we do below when OCM gives no operator at all) would let
-  // e.g. excluding "Walmart" also drop Electrify America stalls whose
-  // listing name happens to mention Walmart.
+  // matched against that operator title only — matching the station name too
+  // would let e.g. excluding "Walmart" also drop Electrify America stalls
+  // whose listing name happens to mention Walmart.
   const excluded = (input.excludedNetworks ?? []).map((n) => n.toLowerCase());
   const notExcluded = (s: ChargerStation) => {
     if (excluded.length === 0) return true;
+    if (s.network === "Default") {
+      // No reported operator: the listing name identifies the station, resolved
+      // the same first-match-wins way its price is, so a POI titled "Electrify
+      // America - Walmart Supercenter" is Electrify America for exclusion too
+      // rather than being dropped by an unrelated "Walmart" opt-out.
+      const named = matchNetwork((s.name ?? "").toLowerCase(), Object.keys(input.networkPrices));
+      return named === null || !excluded.includes(named.toLowerCase());
+    }
     const net = s.network.toLowerCase();
-    const hay = s.network === "Default" ? `${s.network} ${s.name}`.toLowerCase() : net;
     // Short keys (e.g. "OUC") must match the operator title exactly — fuzzy
     // substring matching them would wrongly drop stations named "Touch"/"Couch".
-    return !excluded.some((e) => (e ? (e.length < 4 ? net === e : hay.includes(e)) : false));
+    return !excluded.some((e) => (e ? (e.length < 4 ? net === e : net.includes(e)) : false));
   };
   // Catalog Teslas (make === "Tesla") and custom vehicles flagged with Tesla
   // access can use Tesla-operated Superchargers; others only OPEN Supercharger sites.
