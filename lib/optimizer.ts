@@ -199,6 +199,23 @@ function matchNetwork(haystack: string, stationName: string, networkKeys: string
   return null;
 }
 
+// Resolve a station to exactly one network: an exact (case-sensitive) catalog
+// key match on its reported operator, else matchNetwork() over that operator
+// title — falling back to the listing name only when OCM reports no operator.
+// fetchChargersAlongRoute (pricing/discounts) and notExcluded (optimizeStops)
+// both call this instead of each re-deriving the ladder, so they can't drift
+// into classifying the same station as two different networks.
+function resolveStationNetwork(
+  network: string,
+  name: string,
+  networkPrices: Record<string, number>
+): string | null {
+  if (network !== "Default" && networkPrices[network] !== undefined) return network;
+  const lowerName = (name ?? "").toLowerCase();
+  const haystack = network === "Default" ? lowerName : network.toLowerCase();
+  return matchNetwork(haystack, lowerName, Object.keys(networkPrices));
+}
+
 export async function fetchChargersAlongRoute(
   routeCoords: Coordinates[],
   networkPrices: Record<string, number>,
@@ -320,18 +337,12 @@ export async function fetchChargersAlongRoute(
     }
     if (maxPower < minPowerKw) continue;
 
-    // Resolve the station to exactly one network, then price and discount it as
-    // that network. OCM often lacks OperatorInfo ("Default") — only then does
-    // the station name enter the haystack. A station with a real, reported
-    // operator is matched on that title alone, so e.g. a non-Walmart
-    // charger sited in a Walmart lot doesn't get priced as Walmart's
-    // network just because its name mentions the lot (same resolution used by
-    // notExcluded() in optimizeStops below).
-    const haystack = (network === "Default" ? poi.AddressInfo.Title ?? "" : network).toLowerCase();
-    const stationName = (poi.AddressInfo.Title ?? "").toLowerCase();
-    const resolvedNetwork = networkPrices[network] !== undefined && network !== "Default"
-      ? network
-      : matchNetwork(haystack, stationName, Object.keys(networkPrices));
+    // Resolve the station to exactly one network, then price and discount it
+    // as that network — the same resolveStationNetwork() call notExcluded()
+    // in optimizeStops below uses, so e.g. a non-Walmart charger sited in a
+    // Walmart lot can't be priced as Walmart's network just because its name
+    // mentions the lot but excluded (or not) as Electrify America.
+    const resolvedNetwork = resolveStationNetwork(network, poi.AddressInfo.Title ?? "", networkPrices);
 
     // Use OCM's published UsageCost first, fall back to the resolved network's
     // rate. Only matchNetwork's "supercharger" fallback can name a key the
@@ -399,29 +410,18 @@ export function optimizeStops(
   // non-Tesla operator (e.g. Buc-ee's hosts) are left in. This already lets a
   // non-Tesla (incl. NACS) EV use OPEN Supercharger sites while excluding
   // Tesla-only ones — so no separate NACS handling is needed here.
-  // Networks the user opted out of. Every station resolves to exactly one
-  // network, by the same tiers fetchChargersAlongRoute prices it with: an exact
-  // (case-sensitive) operator title, then matchNetwork() over the operator
-  // title alone — which also backs up the exact-title check case-insensitively
-  // for short keys like "OUC" (substring-matching them would drop stations
-  // named "Touch"/"Couch") — so excluding "Walmart" won't drop an Electrify
-  // America stall sited in a Walmart lot. Only when OCM reports no operator
-  // does the listing name enter the haystack.
-  // matchNetwork's "...Supercharger" -> Tesla fallback is a last resort, so a
-  // Supercharger hosted by a catalogued operator (e.g. Buc-ee's) resolves to
-  // that host here, exactly as it does for pricing: opting out of Tesla keeps
-  // it, opting out of the host drops it. A station that resolves to nothing is
-  // kept.
+  // Networks the user opted out of. resolveStationNetwork() resolves each
+  // station to the same single network fetchChargersAlongRoute prices and
+  // discounts it as (short catalog keys like "OUC" included), so excluding
+  // "Walmart" can't drop an Electrify America stall sited in a Walmart lot,
+  // and a "...Supercharger"-named station hosted by a catalogued operator
+  // (e.g. Buc-ee's) excludes as that host, not Tesla. A station that resolves
+  // to nothing is kept.
   const excluded = (input.excludedNetworks ?? []).map((n) => n.toLowerCase());
   const notExcluded = (s: ChargerStation) => {
     if (excluded.length === 0) return true;
-    if (s.network !== "Default" && input.networkPrices[s.network] !== undefined) {
-      return !excluded.includes(s.network.toLowerCase());
-    }
-    const name = (s.name ?? "").toLowerCase();
-    const haystack = s.network === "Default" ? name : s.network.toLowerCase();
-    const named = matchNetwork(haystack, name, Object.keys(input.networkPrices));
-    return named === null || !excluded.includes(named.toLowerCase());
+    const resolved = resolveStationNetwork(s.network, s.name ?? "", input.networkPrices);
+    return resolved === null || !excluded.includes(resolved.toLowerCase());
   };
   // Catalog Teslas (make === "Tesla") and custom vehicles flagged with Tesla
   // access can use Tesla-operated Superchargers; others only OPEN Supercharger sites.
