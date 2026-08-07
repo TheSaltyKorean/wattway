@@ -1795,6 +1795,12 @@ export const DEFAULT_NETWORK_PRICES: Record<string, number> = {
   "Rivian": 0.44,
   "bp pulse": 0.55,
   "Buc-ee's": 0.40,
+  // Walmart's in-house network (OCM operator "Walmart"), distinct from the
+  // Electrify America stalls sited in Walmart lots. Rarely publishes UsageCost,
+  // so this fallback carries it. Reported rates run ~$0.40-0.57/kWh by market.
+  // Listed after Electrify America so a title like "Electrify America -
+  // Walmart" on an operator-less POI still fuzzy-matches EA first.
+  "Walmart": 0.47,
   // Municipal / utility networks — usually cheaper than commercial. Priced at
   // the daytime (higher) tier so we don't overstate savings. These are per-kWh;
   // per-minute municipal networks (e.g. Austin Energy) can't be modeled here.

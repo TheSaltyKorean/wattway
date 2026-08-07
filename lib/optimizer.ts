@@ -274,6 +274,14 @@ export async function fetchChargersAlongRoute(
     const distFromRoute = minDistanceToRoute(coords, routeCoords);
     if (distFromRoute > CORRIDOR_MILES) continue;
 
+    // Drop stations OCM knows aren't usable: "Planned For Future Date"
+    // (announced/under-construction sites, e.g. much of the Walmart buildout),
+    // "Not Operational", "Temporarily Unavailable", and decommissioned
+    // listings. StatusType survives verbose=false, so this needs no extra
+    // request. A missing or "Unknown" status is kept — absent data shouldn't
+    // hide a station that may well be live.
+    if (poi.StatusType && poi.StatusType.IsOperational === false) continue;
+
     const network: string = poi.OperatorInfo?.Title ?? "Default";
 
     let maxPower = 0;
