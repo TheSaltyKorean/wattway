@@ -181,13 +181,15 @@ const SEGMENT_PARALLELISM = 4;
 // the first match wins — "Electrify America - Walmart Supercenter" is Electrify
 // America, not Walmart. Pricing, member discounts and exclusion all resolve
 // through here so they can't classify the same station as two different
-// networks. Short keys (e.g. "OUC") only match an exact operator title via the
-// caller's direct lookup — substring-matching them here would misfire on names
-// like "touch"/"couch".
+// networks. Short keys (e.g. "OUC") only match the whole haystack exactly
+// (case-insensitively, so an OCM operator title cased differently than the
+// catalog, e.g. "ouc", still resolves) — substring-matching them here would
+// misfire on names like "touch"/"couch".
 function matchNetwork(haystack: string, stationName: string, networkKeys: string[]): string | null {
   for (const key of networkKeys) {
-    if (key === "Default" || key.length < 4) continue;
-    if (haystack.includes(key.toLowerCase())) return key;
+    if (key === "Default") continue;
+    const lower = key.toLowerCase();
+    if (key.length < 4 ? haystack === lower : haystack.includes(lower)) return key;
   }
   // Last resort: Superchargers are routinely listed with no operator at all or
   // under the host's name ("Buc-ee's"), so the listing name is the only signal.
@@ -399,11 +401,12 @@ export function optimizeStops(
   // Tesla-only ones — so no separate NACS handling is needed here.
   // Networks the user opted out of. Every station resolves to exactly one
   // network, by the same tiers fetchChargersAlongRoute prices it with: an exact
-  // operator title (also the only way short keys like "OUC" ever match — fuzzy
-  // matching them would drop stations named "Touch"/"Couch"), then
-  // matchNetwork() over the operator title alone, so excluding "Walmart" won't
-  // drop an Electrify America stall sited in a Walmart lot. Only when OCM
-  // reports no operator does the listing name enter the haystack.
+  // (case-sensitive) operator title, then matchNetwork() over the operator
+  // title alone — which also backs up the exact-title check case-insensitively
+  // for short keys like "OUC" (substring-matching them would drop stations
+  // named "Touch"/"Couch") — so excluding "Walmart" won't drop an Electrify
+  // America stall sited in a Walmart lot. Only when OCM reports no operator
+  // does the listing name enter the haystack.
   // matchNetwork's "...Supercharger" -> Tesla fallback is a last resort, so a
   // Supercharger hosted by a catalogued operator (e.g. Buc-ee's) resolves to
   // that host here, exactly as it does for pricing: opting out of Tesla keeps
