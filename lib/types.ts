@@ -95,8 +95,8 @@ export interface TripInput {
   avoidFerries?: boolean;
   avoidTolls?: boolean;
   // Networks the user has opted out of — stations on these are excluded from
-  // planning (matched case-insensitively against the operator title; when OCM
-  // reports no operator at all, the listing name is resolved to the single
-  // network the price lookup picks for it).
+  // planning. Each station is resolved case-insensitively to the single network
+  // its price lookup picks for it: the operator title when OCM reports one,
+  // otherwise the listing name.
   excludedNetworks?: string[];
 }

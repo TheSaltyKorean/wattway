@@ -294,12 +294,13 @@ export async function fetchChargersAlongRoute(
     const distFromRoute = minDistanceToRoute(coords, routeCoords);
     if (distFromRoute > CORRIDOR_MILES) continue;
 
-    // Drop stations OCM knows aren't usable: "Planned For Future Date"
+    // Drop stations OCM flags as not operational: "Planned For Future Date"
     // (announced/under-construction sites, e.g. much of the Walmart buildout),
-    // "Not Operational", "Temporarily Unavailable", and decommissioned
-    // listings. StatusType survives verbose=false, so this needs no extra
-    // request. A missing or "Unknown" status is kept — absent data shouldn't
-    // hide a station that may well be live.
+    // "Not Operational", and both "Removed" statuses. StatusType survives
+    // verbose=false, so this needs no extra request. A missing or "Unknown"
+    // status is kept — absent data shouldn't hide a station that may well be
+    // live — and so is "Temporarily Unavailable", which OCM itself records
+    // with IsOperational: true.
     if (poi.StatusType && poi.StatusType.IsOperational === false) continue;
 
     const network: string = poi.OperatorInfo?.Title ?? "Default";
@@ -394,27 +395,25 @@ export function optimizeStops(
   // non-Tesla operator (e.g. Buc-ee's hosts) are left in. This already lets a
   // non-Tesla (incl. NACS) EV use OPEN Supercharger sites while excluding
   // Tesla-only ones — so no separate NACS handling is needed here.
-  // Networks the user opted out of. A station with a reported operator is
-  // matched against that operator title only — matching the station name too
-  // would let e.g. excluding "Walmart" also drop Electrify America stalls
-  // whose listing name happens to mention Walmart.
+  // Networks the user opted out of. Every station resolves to exactly one
+  // network, by the same tiers fetchChargersAlongRoute prices it with: an exact
+  // operator title (also the only way short keys like "OUC" ever match — fuzzy
+  // matching them would drop stations named "Touch"/"Couch"), then
+  // matchNetwork() over the operator title alone, so excluding "Walmart" won't
+  // drop an Electrify America stall sited in a Walmart lot. Only when OCM
+  // reports no operator does the listing name enter the haystack; a
+  // "...Supercharger" name resolves to Tesla either way, via matchNetwork's own
+  // fallback. A station that resolves to nothing is kept.
   const excluded = (input.excludedNetworks ?? []).map((n) => n.toLowerCase());
   const notExcluded = (s: ChargerStation) => {
     if (excluded.length === 0) return true;
-    if (s.network === "Default") {
-      // No reported operator: the listing name identifies the station, resolved
-      // the same way its price is, so a POI titled "Electrify America - Walmart
-      // Supercenter" is Electrify America for exclusion too rather than being
-      // dropped by an unrelated "Walmart" opt-out, and one titled "Supercharger
-      // - Barstow, CA" is the Tesla it is priced as.
-      const name = (s.name ?? "").toLowerCase();
-      const named = matchNetwork(name, name, Object.keys(input.networkPrices));
-      return named === null || !excluded.includes(named.toLowerCase());
+    if (s.network !== "Default" && input.networkPrices[s.network] !== undefined) {
+      return !excluded.includes(s.network.toLowerCase());
     }
-    const net = s.network.toLowerCase();
-    // Short keys (e.g. "OUC") must match the operator title exactly — fuzzy
-    // substring matching them would wrongly drop stations named "Touch"/"Couch".
-    return !excluded.some((e) => (e ? (e.length < 4 ? net === e : net.includes(e)) : false));
+    const name = (s.name ?? "").toLowerCase();
+    const haystack = s.network === "Default" ? name : s.network.toLowerCase();
+    const named = matchNetwork(haystack, name, Object.keys(input.networkPrices));
+    return named === null || !excluded.includes(named.toLowerCase());
   };
   // Catalog Teslas (make === "Tesla") and custom vehicles flagged with Tesla
   // access can use Tesla-operated Superchargers; others only OPEN Supercharger sites.
