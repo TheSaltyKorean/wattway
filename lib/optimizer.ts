@@ -304,6 +304,7 @@ export async function fetchChargersAlongRoute(
     // network just because its name mentions the lot (same guard used by
     // notExcluded() in optimizeStops below).
     const haystack = (network === "Default" ? `${network} ${poi.AddressInfo.Title ?? ""}` : network).toLowerCase();
+    const stationName = (poi.AddressInfo.Title ?? "").toLowerCase();
     const publishedPrice = parseOCMPrice(poi.UsageCost ?? poi.AddressInfo?.UsageCost);
     const fallbackPrice = (() => {
       if (networkPrices[network] !== undefined && network !== "Default") return networkPrices[network];
@@ -319,11 +320,14 @@ export async function fetchChargersAlongRoute(
       return networkPrices["Default"] ?? 0.45;
     })();
 
-    // Apply member pricing for subscribed networks
+    // Apply member pricing for subscribed networks. The Tesla "supercharger"
+    // check reads the full station name, not haystack (which omits the name
+    // for known operators) — so a Supercharger hosted under a non-Tesla
+    // operator (e.g. Buc-ee's) still gets the Tesla member discount.
     let effectivePrice = publishedPrice ?? fallbackPrice;
     for (const plan of memberships) {
       if (haystack.includes(plan.networkKey.toLowerCase()) ||
-          (plan.networkKey === "Tesla" && haystack.includes("supercharger"))) {
+          (plan.networkKey === "Tesla" && stationName.includes("supercharger"))) {
         effectivePrice = Math.max(0, effectivePrice - plan.discountPerKwh);
         break;
       }
