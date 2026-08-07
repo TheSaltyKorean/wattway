@@ -370,13 +370,16 @@ export function optimizeStops(
   // non-Tesla operator (e.g. Buc-ee's hosts) are left in. This already lets a
   // non-Tesla (incl. NACS) EV use OPEN Supercharger sites while excluding
   // Tesla-only ones — so no separate NACS handling is needed here.
-  // Networks the user opted out of (case-insensitive substring match on the
-  // operator title or station name).
+  // Networks the user opted out of. A station with a reported operator is
+  // matched against that operator title only — falling back to the station
+  // name too (as we do below when OCM gives no operator at all) would let
+  // e.g. excluding "Walmart" also drop Electrify America stalls whose
+  // listing name happens to mention Walmart.
   const excluded = (input.excludedNetworks ?? []).map((n) => n.toLowerCase());
   const notExcluded = (s: ChargerStation) => {
     if (excluded.length === 0) return true;
     const net = s.network.toLowerCase();
-    const hay = `${s.network} ${s.name}`.toLowerCase();
+    const hay = s.network === "Default" ? `${s.network} ${s.name}`.toLowerCase() : net;
     // Short keys (e.g. "OUC") must match the operator title exactly — fuzzy
     // substring matching them would wrongly drop stations named "Touch"/"Couch".
     return !excluded.some((e) => (e ? (e.length < 4 ? net === e : hay.includes(e)) : false));
