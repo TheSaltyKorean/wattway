@@ -179,10 +179,11 @@ const SEGMENT_PARALLELISM = 4;
 // Resolve an already-lowercased operator title (or, for an operator-less POI,
 // its listing name) to a single catalogued network. The catalog is ordered and
 // the first match wins — "Electrify America - Walmart Supercenter" is Electrify
-// America, not Walmart. Pricing and exclusion both resolve through here so they
-// can't classify the same station as two different networks. Short keys (e.g.
-// "OUC") only match an exact operator title via the caller's direct lookup —
-// substring-matching them here would misfire on names like "touch"/"couch".
+// America, not Walmart. Pricing, member discounts and exclusion all resolve
+// through here so they can't classify the same station as two different
+// networks. Short keys (e.g. "OUC") only match an exact operator title via the
+// caller's direct lookup — substring-matching them here would misfire on names
+// like "touch"/"couch".
 function matchNetwork(haystack: string, stationName: string, networkKeys: string[]): string | null {
   for (const key of networkKeys) {
     if (key === "Default" || key.length < 4) continue;
@@ -317,33 +318,34 @@ export async function fetchChargersAlongRoute(
     }
     if (maxPower < minPowerKw) continue;
 
-    // Use OCM's published UsageCost first, fall back to network defaults.
-    // OCM often lacks OperatorInfo ("Default") — only then fall back to
-    // matching the station name too. A station with a real, reported
+    // Resolve the station to exactly one network, then price and discount it as
+    // that network. OCM often lacks OperatorInfo ("Default") — only then does
+    // the station name enter the haystack. A station with a real, reported
     // operator is matched on that title alone, so e.g. a non-Walmart
     // charger sited in a Walmart lot doesn't get priced as Walmart's
-    // network just because its name mentions the lot (same guard used by
+    // network just because its name mentions the lot (same resolution used by
     // notExcluded() in optimizeStops below).
     const haystack = (network === "Default" ? `${network} ${poi.AddressInfo.Title ?? ""}` : network).toLowerCase();
     const stationName = (poi.AddressInfo.Title ?? "").toLowerCase();
-    const publishedPrice = parseOCMPrice(poi.UsageCost ?? poi.AddressInfo?.UsageCost);
-    const fallbackPrice = (() => {
-      if (networkPrices[network] !== undefined && network !== "Default") return networkPrices[network];
-      const matched = matchNetwork(haystack, stationName, Object.keys(networkPrices));
-      // Only matchNetwork's "supercharger" fallback can name a key the caller's
-      // catalog lacks; a key it matched by substring is always present.
-      if (matched) return networkPrices[matched] ?? 0.40;
-      return networkPrices["Default"] ?? 0.45;
-    })();
+    const resolvedNetwork = networkPrices[network] !== undefined && network !== "Default"
+      ? network
+      : matchNetwork(haystack, stationName, Object.keys(networkPrices));
 
-    // Apply member pricing for subscribed networks. The Tesla "supercharger"
-    // check reads stationName, like matchNetwork's own, so a Supercharger
-    // hosted under a non-Tesla operator (e.g. Buc-ee's) still gets the Tesla
-    // member discount.
+    // Use OCM's published UsageCost first, fall back to the resolved network's
+    // rate. Only matchNetwork's "supercharger" fallback can name a key the
+    // caller's catalog lacks; a key it matched by substring is always present.
+    const publishedPrice = parseOCMPrice(poi.UsageCost ?? poi.AddressInfo?.UsageCost);
+    const fallbackPrice = resolvedNetwork !== null
+      ? networkPrices[resolvedNetwork] ?? 0.40
+      : networkPrices["Default"] ?? 0.45;
+
+    // Member pricing applies only to the network the station resolved to. A
+    // Supercharger hosted by a catalogued operator (e.g. Buc-ee's) resolves to
+    // that host and is priced at its rate, so a Tesla membership must not
+    // discount it — that would produce a rate no network charges.
     let effectivePrice = publishedPrice ?? fallbackPrice;
     for (const plan of memberships) {
-      if (haystack.includes(plan.networkKey.toLowerCase()) ||
-          (plan.networkKey === "Tesla" && stationName.includes("supercharger"))) {
+      if (resolvedNetwork !== null && plan.networkKey.toLowerCase() === resolvedNetwork.toLowerCase()) {
         effectivePrice = Math.max(0, effectivePrice - plan.discountPerKwh);
         break;
       }
@@ -401,9 +403,12 @@ export function optimizeStops(
   // matching them would drop stations named "Touch"/"Couch"), then
   // matchNetwork() over the operator title alone, so excluding "Walmart" won't
   // drop an Electrify America stall sited in a Walmart lot. Only when OCM
-  // reports no operator does the listing name enter the haystack; a
-  // "...Supercharger" name resolves to Tesla either way, via matchNetwork's own
-  // fallback. A station that resolves to nothing is kept.
+  // reports no operator does the listing name enter the haystack.
+  // matchNetwork's "...Supercharger" -> Tesla fallback is a last resort, so a
+  // Supercharger hosted by a catalogued operator (e.g. Buc-ee's) resolves to
+  // that host here, exactly as it does for pricing: opting out of Tesla keeps
+  // it, opting out of the host drops it. A station that resolves to nothing is
+  // kept.
   const excluded = (input.excludedNetworks ?? []).map((n) => n.toLowerCase());
   const notExcluded = (s: ChargerStation) => {
     if (excluded.length === 0) return true;
