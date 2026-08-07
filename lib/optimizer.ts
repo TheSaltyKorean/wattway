@@ -183,11 +183,16 @@ const SEGMENT_PARALLELISM = 4;
 // can't classify the same station as two different networks. Short keys (e.g.
 // "OUC") only match an exact operator title via the caller's direct lookup —
 // substring-matching them here would misfire on names like "touch"/"couch".
-function matchNetwork(haystack: string, networkKeys: string[]): string | null {
+function matchNetwork(haystack: string, stationName: string, networkKeys: string[]): string | null {
   for (const key of networkKeys) {
     if (key === "Default" || key.length < 4) continue;
     if (haystack.includes(key.toLowerCase())) return key;
   }
+  // Last resort: Superchargers are routinely listed with no operator at all or
+  // under the host's name ("Buc-ee's"), so the listing name is the only signal.
+  // Read from stationName rather than haystack, which omits the name when the
+  // station has a reported operator.
+  if (stationName.includes("supercharger")) return "Tesla";
   return null;
 }
 
@@ -323,19 +328,17 @@ export async function fetchChargersAlongRoute(
     const publishedPrice = parseOCMPrice(poi.UsageCost ?? poi.AddressInfo?.UsageCost);
     const fallbackPrice = (() => {
       if (networkPrices[network] !== undefined && network !== "Default") return networkPrices[network];
-      const matched = matchNetwork(haystack, Object.keys(networkPrices));
-      if (matched) return networkPrices[matched];
-      // Read the station name, not haystack (which omits the name for known
-      // operators), so a Supercharger hosted under an uncatalogued operator is
-      // priced as Tesla — matching the membership check below.
-      if (stationName.includes("supercharger")) return networkPrices["Tesla"] ?? 0.40;
+      const matched = matchNetwork(haystack, stationName, Object.keys(networkPrices));
+      // Only matchNetwork's "supercharger" fallback can name a key the caller's
+      // catalog lacks; a key it matched by substring is always present.
+      if (matched) return networkPrices[matched] ?? 0.40;
       return networkPrices["Default"] ?? 0.45;
     })();
 
     // Apply member pricing for subscribed networks. The Tesla "supercharger"
-    // check reads stationName for the same reason as the fallback above — so a
-    // Supercharger hosted under a non-Tesla operator (e.g. Buc-ee's) still gets
-    // the Tesla member discount.
+    // check reads stationName, like matchNetwork's own, so a Supercharger
+    // hosted under a non-Tesla operator (e.g. Buc-ee's) still gets the Tesla
+    // member discount.
     let effectivePrice = publishedPrice ?? fallbackPrice;
     for (const plan of memberships) {
       if (haystack.includes(plan.networkKey.toLowerCase()) ||
@@ -400,10 +403,12 @@ export function optimizeStops(
     if (excluded.length === 0) return true;
     if (s.network === "Default") {
       // No reported operator: the listing name identifies the station, resolved
-      // the same first-match-wins way its price is, so a POI titled "Electrify
-      // America - Walmart Supercenter" is Electrify America for exclusion too
-      // rather than being dropped by an unrelated "Walmart" opt-out.
-      const named = matchNetwork((s.name ?? "").toLowerCase(), Object.keys(input.networkPrices));
+      // the same way its price is, so a POI titled "Electrify America - Walmart
+      // Supercenter" is Electrify America for exclusion too rather than being
+      // dropped by an unrelated "Walmart" opt-out, and one titled "Supercharger
+      // - Barstow, CA" is the Tesla it is priced as.
+      const name = (s.name ?? "").toLowerCase();
+      const named = matchNetwork(name, name, Object.keys(input.networkPrices));
       return named === null || !excluded.includes(named.toLowerCase());
     }
     const net = s.network.toLowerCase();
