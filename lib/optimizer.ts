@@ -327,7 +327,7 @@ export async function fetchChargersAlongRoute(
     // charger sited in a Walmart lot doesn't get priced as Walmart's
     // network just because its name mentions the lot (same resolution used by
     // notExcluded() in optimizeStops below).
-    const haystack = (network === "Default" ? `${network} ${poi.AddressInfo.Title ?? ""}` : network).toLowerCase();
+    const haystack = (network === "Default" ? poi.AddressInfo.Title ?? "" : network).toLowerCase();
     const stationName = (poi.AddressInfo.Title ?? "").toLowerCase();
     const resolvedNetwork = networkPrices[network] !== undefined && network !== "Default"
       ? network
