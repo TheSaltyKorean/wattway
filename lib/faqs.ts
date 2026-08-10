@@ -29,11 +29,12 @@ export function siteFAQs(): FAQ[] {
       q: "What is WattWay?",
       a:
         "A free EV road-trip planner that optimizes for charging cost. You give it an origin, a " +
-        "destination and your car; it picks a low-cost, workable set of charging stops along that " +
-        "route, accounting for each network's price, your memberships, charger power and " +
-        "reliability, and how far your car actually goes between stops. It is a heuristic rather " +
-        "than a true minimizer — see \"How does WattWay choose where to stop?\" for what that " +
-        "means in practice.",
+        "destination and your car; it picks a low-cost set of charging stops along that route, " +
+        "accounting for each network's price, your memberships, charger power and reliability, and " +
+        "how far your car actually goes between stops. Two caveats it is worth knowing up front: " +
+        "it is a heuristic rather than a true cost minimizer, and it does not check whether your " +
+        "car's connector fits the charger. See \"How does WattWay choose where to stop?\" and " +
+        "\"Will WattWay only pick chargers my car can actually plug into?\" below.",
     },
     {
       q: "How is it different from the charging planner built into my car?",
@@ -129,7 +130,10 @@ export function siteFAQs(): FAQ[] {
         "It has nowhere to put it. Your car, memberships, excluded networks and custom specs live in " +
         "your browser's local storage. The origin and destination you type are sent to Google and " +
         "Open Charge Map to compute the route and find chargers, because that is the only way to " +
-        "answer the question, and they are not retained by WattWay afterwards. Three things are " +
+        "answer the question, and they are not retained by WattWay afterwards. One more recipient " +
+        "to know about: if you press \"use my location\" and browser GPS is unavailable or you " +
+        "deny it, the page falls back to ipapi.co, which sees your IP address and returns an " +
+        "approximate location. That only happens on that fallback path, never otherwise. Three things are " +
         "measured. First, an empty beacon to /api/plan on each successful plan — no body, no " +
         "content at all, just a count. Second, because the site is served through Cloudflare, " +
         "Cloudflare Web Analytics records a page-load beacon: URL, referrer, and coarse device and " +

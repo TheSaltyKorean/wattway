@@ -332,7 +332,7 @@ export default async function NetworkPage({
         </h2>
         <p className="mt-2 text-sm leading-relaxed text-[var(--text-muted)]">
           A rate only matters if you drive past it. WattWay looks at the chargers actually along
-          your route — any operator, not just this one — and picks a low-cost, workable set of stops
+          your route — any operator, not just this one — and picks a low-cost set of stops
           for your car. You can also exclude networks you&apos;d rather not use.
         </p>
         <Link
