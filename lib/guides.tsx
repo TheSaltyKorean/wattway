@@ -387,8 +387,11 @@ function HowItWorksGuide() {
           </li>
           <li>
             <strong className="text-[var(--text)]">Repeat to the destination.</strong> The result is
-            a full sequence of stops with per-stop cost, energy added, charge time, detour distance
-            and arrival state of charge, plus totals for the trip.
+            a sequence of stops with per-stop cost, energy added, charge time, detour distance and
+            arrival state of charge, plus totals for the trip. If it runs out of reachable chargers
+            — or hits an internal 50-stop guard — it stops there and returns what it has, flagged
+            as an incomplete plan, rather than failing outright. An incomplete plan means the route
+            genuinely lacks the charger coverage to finish, not that something went wrong.
           </li>
         </ol>
       </section>
@@ -516,7 +519,9 @@ function FastChargingGuide() {
         </P>
         <div className="overflow-x-auto">
           <table className="w-full text-sm border-collapse">
-            <caption className="sr-only">Fastest-charging EVs by peak DC power</caption>
+            <caption className="sr-only">
+              EVs ranked by modeled 10-80% charging time, fastest first
+            </caption>
             <thead>
               <tr className="text-left text-xs uppercase tracking-wide text-[var(--text-muted)]">
                 <th scope="col" className="py-2 pr-4 font-medium">Vehicle</th>

@@ -57,8 +57,8 @@ export async function generateMetadata({
   const title = `${network.name} Charging Cost per kWh (${PRICING_YEAR})`;
   const description =
     `${network.name} DC fast charging costs about ${perKwh(network.pricePerKwh)}. See what that ` +
-    `means per charge and per 100 miles for your EV, how it compares with every other US charging ` +
-    `network, and whether the membership pays off.`;
+    `means per charge and per 100 miles for your EV, how it compares with the other ` +
+    `${chargingNetworks().length - 1} networks WattWay prices, and whether the membership pays off.`;
 
   return {
     title,

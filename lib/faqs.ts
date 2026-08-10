@@ -127,8 +127,10 @@ export function siteFAQs(): FAQ[] {
     {
       q: "What does WattWay do with my data?",
       a:
-        "It has nowhere to put it. Your car, memberships, excluded networks and custom specs live in " +
-        "your browser's local storage. The origin and destination you type are sent to Google and " +
+        "Your car, memberships, excluded networks and custom specs are saved in your browser's " +
+        "local storage rather than on a server — though saved locally is not the same as never " +
+        "leaving your device, and the selected vehicle is one of the fields sent to analytics " +
+        "below. The origin and destination you type are sent to Google and " +
         "Open Charge Map to compute the route and find chargers, because that is the only way to " +
         "answer the question, and they are not retained by WattWay afterwards. One more recipient " +
         "to know about: if you press \"use my location\" and browser GPS is unavailable or you " +
