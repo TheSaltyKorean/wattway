@@ -428,7 +428,10 @@ function HowItWorksGuide() {
         <P>
           It does not search for the globally cheapest stop sequence, and it does not consider
           chargers in the near {Math.round(CANDIDATE_WINDOW * 100)}% of what it can reach — see the
-          caveats above.
+          caveats above. It also does not check connector compatibility: vehicle profiles carry no
+          connector type, so a station is chosen on power, price and reliability without verifying
+          that your car can physically plug in. A CCS-only car can be routed to a CHAdeMO-only
+          site, and vice versa — check the connector before you rely on a stop.
           It does not model per-minute billing, idle fees or session fees, because those vary by
           site and by how long you linger — things the planner cannot know. It does not check live
           stall availability, so a station shown as available may be occupied or broken when you
@@ -612,7 +615,7 @@ export const GUIDES: Guide[] = [
         { "@type": "HowToStep", name: "Find chargers along the corridor", text: "Query charger data in segments along the route rather than from a single midpoint, so the endpoints of a long route get options too, and drop stations reported non-operational." },
         { "@type": "HowToStep", name: "Price every candidate", text: "Give each station an effective cost per kWh from its published rate or its operator's reference rate, minus discounts from memberships you hold, and remove excluded networks." },
         { "@type": "HowToStep", name: "Track state of charge along the route", text: "Advance along the route from your actual starting battery level, considering only chargers reachable with the reserve intact." },
-        { "@type": "HowToStep", name: "Score the far candidates on total cost", text: `Of the stations still reachable, keep only those in the far ${Math.round((1 - CANDIDATE_WINDOW) * 100)}% of that range, which pushes toward fewer stops without guaranteeing the fewest. Rank those candidates on effective price per kWh, adjusted by penalties for detour distance, for stalls below 150 kW (doubled below 100 kW), for a single fast port, for a station not recently verified, for arriving below 15% state of charge, and for an operator-less Supercharger record when the vehicle is not Tesla-eligible, plus a mild preference for stations farther along the route. Commit to the best without revisiting it.` },
+        { "@type": "HowToStep", name: "Score the far candidates", text: `Of the stations still reachable, keep only those in the far ${Math.round((1 - CANDIDATE_WINDOW) * 100)}% of that range, which pushes toward fewer stops without guaranteeing the fewest. Rank those candidates on effective price per kWh, adjusted by penalties for detour distance, for stalls below 150 kW (doubled below 100 kW), for a single fast port, for a station not recently verified, for arriving below 15% state of charge, and for an operator-less Supercharger record when the vehicle is not Tesla-eligible, plus a mild preference for stations farther along the route. Commit to the best without revisiting it.` },
         { "@type": "HowToStep", name: "Charge to 80 percent", text: "Top up to 80% at intermediate stops, charging higher only when the next gap requires it, because charging past 80% is disproportionately slow; the final stop takes only the energy the destination needs and usually leaves below 80%." },
         { "@type": "HowToStep", name: "Repeat to the destination", text: "Continue until the destination is reachable, producing per-stop cost, energy, charge time, detour and arrival state of charge. If no reachable charger remains, or a 50-stop guard trips, the planner returns the partial sequence it has and flags the plan as incomplete rather than failing outright." },
       ],

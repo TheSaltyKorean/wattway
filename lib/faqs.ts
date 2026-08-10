@@ -86,6 +86,17 @@ export function siteFAQs(): FAQ[] {
         "community data is complete.",
     },
     {
+      q: "Will WattWay only pick chargers my car can actually plug into?",
+      a:
+        "No — this is a real limitation worth knowing. WattWay does not model connector " +
+        "compatibility. Vehicle profiles carry no connector type, and stations are chosen on power, " +
+        "price and reliability without checking the plug. A CCS-only car can be routed to a " +
+        "CHAdeMO-only site, and a CHAdeMO car to a CCS-only one. In practice most modern US fast " +
+        "chargers are CCS or NACS and most modern EVs use one of those, so it rarely bites — but " +
+        "check the connector before you commit to a stop, especially on older or single-standard " +
+        "sites. You can also exclude networks you can't use.",
+    },
+    {
       q: "How accurate are the cost estimates?",
       a:
         "They are model-based estimates, not quotes. Real cost moves with live network pricing, " +
@@ -133,8 +144,12 @@ export function siteFAQs(): FAQ[] {
         "your device, browser and language, and an approximate location derived from your IP " +
         "address. So a plan event is tied to your browser and session inside Google's data, even " +
         "though it carries no name, account or route from us. If you would rather not be counted, " +
-        "any ad or tracking blocker stops the GA4 tag; the /api/plan beacon is same-origin and has " +
-        "nothing in it to identify you.",
+        "any ad or tracking blocker stops the GA4 tag. The /api/plan beacon carries no application " +
+        "payload and the Worker behind it keeps only an aggregate count — but be precise about what " +
+        "that does and doesn't mean: it is an ordinary same-origin request, so it still carries " +
+        "whatever first-party cookies your browser holds for the site, and Cloudflare necessarily " +
+        "sees the connection's IP address and user agent. None of that is read or retained by " +
+        "WattWay; it is simply what any web request involves.",
     },
     {
       q: "Can I exclude networks I don't want to use?",
