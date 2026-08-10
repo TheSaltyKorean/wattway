@@ -388,10 +388,12 @@ function HowItWorksGuide() {
           <li>
             <strong className="text-[var(--text)]">Repeat to the destination.</strong> The result is
             a sequence of stops with per-stop cost, energy added, charge time, detour distance and
-            arrival state of charge, plus totals for the trip. If it runs out of reachable chargers
-            — or hits an internal 50-stop guard — it stops there and returns what it has, flagged
-            as an incomplete plan, rather than failing outright. An incomplete plan means the route
-            genuinely lacks the charger coverage to finish, not that something went wrong.
+            arrival state of charge, plus totals for the trip. It can also stop short and return
+            what it has, flagged as an incomplete plan rather than failing outright, for either of
+            two different reasons: no charger it can still reach (a genuine coverage gap on that
+            route), or an internal 50-stop cap, which a long enough trip in a short-range vehicle
+            can hit while chargers are still available. The flag alone doesn&apos;t tell you which
+            — check whether the plan ran out of road or ran out of stops.
           </li>
         </ol>
       </section>
@@ -622,7 +624,7 @@ export const GUIDES: Guide[] = [
         { "@type": "HowToStep", name: "Track state of charge along the route", text: "Advance along the route from your actual starting battery level, considering only chargers reachable with the reserve intact." },
         { "@type": "HowToStep", name: "Score the far candidates", text: `Of the stations still reachable, keep only those in the far ${Math.round((1 - CANDIDATE_WINDOW) * 100)}% of that range, which pushes toward fewer stops without guaranteeing the fewest. Rank those candidates on effective price per kWh, adjusted by penalties for detour distance, for stalls below 150 kW (doubled below 100 kW), for a single fast port, for a station not recently verified, for arriving below 15% state of charge, and for an operator-less Supercharger record when the vehicle is not Tesla-eligible, plus a mild preference for stations farther along the route. Commit to the best without revisiting it.` },
         { "@type": "HowToStep", name: "Charge to 80 percent", text: "Top up to 80% at intermediate stops, charging higher only when the next gap requires it, because charging past 80% is disproportionately slow; the final stop takes only the energy the destination needs and usually leaves below 80%." },
-        { "@type": "HowToStep", name: "Repeat to the destination", text: "Continue until the destination is reachable, producing per-stop cost, energy, charge time, detour and arrival state of charge. If no reachable charger remains, or a 50-stop guard trips, the planner returns the partial sequence it has and flags the plan as incomplete rather than failing outright." },
+        { "@type": "HowToStep", name: "Repeat to the destination", text: "Continue until the destination is reachable, producing per-stop cost, energy, charge time, detour and arrival state of charge. The planner can also stop short and return a partial sequence flagged incomplete, for two distinct reasons: no charger remains within reach (a real coverage gap on that route), or an internal 50-stop cap is exhausted while reachable chargers may still exist. The flag does not distinguish them." },
       ],
     },
   },
