@@ -1,0 +1,332 @@
+# WattWay — full text corpus
+
+> WattWay is a free, cost-optimized EV road-trip charging planner. Given an origin and destination, it finds the cheapest realistic sequence of charging stops for a specific electric vehicle — using charging-network prices, the driver's memberships, each charger's power and reliability, and the car's real-world range.
+
+Source: https://wattway.net · Reference pricing year: 2026 · Last updated: 2026-08-10
+
+WattWay runs entirely in the browser as a static site: there is no account, no login, and no server that stores user data. Routing, geocoding, and place search come from the Google Maps Platform; charger locations, connector types, power levels, and pricing come from Open Charge Map (a community-edited database). Every number WattWay shows — cost, range, energy used, charge time, number and location of stops, arrival state of charge — is a model-based estimate, not a quote or a measurement. See the legal disclaimer for the full data and accuracy notice.
+
+All figures below are model-based estimates, not quotes. Charge times assume a full-power
+stall and a warm battery and are best cases; real sessions commonly run 1.5-2x longer.
+
+## Charging model
+
+- Planning window: charge from 10% to 80% state of charge; the planner goes above 80% only when the next gap requires it.
+- Average power below 80%: 85% of the vehicle's nameplate peak kW, capped by the stall's output.
+- Average power above 80%: 40% of the below-80% rate.
+- Stop scoring: effective price per kWh after memberships, plus a penalty per mile of detour, plus a penalty for stalls under 150 kW.
+- Unrecognized operators are priced at $0.45/kWh.
+
+## Charging networks
+
+| Network | $/kWh | Type | Membership |
+| --- | --- | --- | --- |
+| OUC | 0.20 | municipal | none |
+| Tacoma Power | 0.21 | municipal | none |
+| Seattle City Light | 0.32 | municipal | none |
+| Francis Energy | 0.39 | regional | none |
+| Ionna | 0.39 | automaker | none |
+| Buc-ee's | 0.40 | regional | none |
+| Tesla | 0.40 | automaker | Tesla Supercharging Membership, $12.99/mo, -$0.10/kWh |
+| Rivian | 0.44 | automaker | none |
+| Walmart | 0.47 | national | none |
+| ChargePoint | 0.48 | national | none |
+| Volta | 0.49 | national | none |
+| Shell Recharge | 0.52 | national | Shell Recharge Plus, $4.99/mo, -$0.07/kWh |
+| bp pulse | 0.55 | national | none |
+| EVgo | 0.55 | national | EVgo Plus, $6.99/mo, -$0.10/kWh |
+| Electrify America | 0.56 | national | Electrify America Pass+, $4.00/mo, -$0.10/kWh |
+| Blink | 0.59 | national | none |
+
+### OUC — $0.20/kWh
+URL: https://wattway.net/charging-networks/ouc
+
+Orlando Utilities Commission chargers across central Florida, priced well below commercial networks. Priced here at the daytime tier.
+
+### Tacoma Power — $0.21/kWh
+URL: https://wattway.net/charging-networks/tacoma-power
+
+Tacoma's municipal utility network, among the cheapest per-kWh DC fast charging in the country. Priced here at the daytime tier.
+
+### Seattle City Light — $0.32/kWh
+URL: https://wattway.net/charging-networks/seattle-city-light
+
+Municipal utility chargers in the Seattle area. Utility-run networks usually undercut commercial operators; WattWay prices the daytime (higher) tier so a plan never overstates the saving.
+
+### Francis Energy — $0.39/kWh
+URL: https://wattway.net/charging-networks/francis-energy
+
+A regional operator concentrated in Oklahoma and the surrounding states, built to fill in fast-charging gaps across rural corridors that the national networks skipped. Typically prices below the national average.
+
+### Ionna — $0.39/kWh
+URL: https://wattway.net/charging-networks/ionna
+
+The joint venture backed by eight automakers (BMW, GM, Honda, Hyundai, Kia, Mercedes-Benz, Stellantis and Toyota), building high-power "Rechargery" sites with both NACS and CCS cables. Newer and smaller than the incumbents, but priced aggressively.
+
+### Buc-ee's — $0.40/kWh
+URL: https://wattway.net/charging-networks/buc-ee-s
+
+Travel-center chargers at Buc-ee's locations across Texas and the Southeast. Notable for road trips because the amenities are genuinely worth the 20 minutes a charge takes.
+
+### Tesla — $0.40/kWh
+URL: https://wattway.net/charging-networks/tesla
+
+The Supercharger network — the largest and most reliable DC fast-charging network in North America, and now open to many non-Tesla EVs via NACS adapters and native NACS ports. Rates vary by site and time of day, and a Supercharging Membership cuts roughly $0.10/kWh off the per-session rate.
+
+### Rivian — $0.44/kWh
+URL: https://wattway.net/charging-networks/rivian
+
+The Rivian Adventure Network, sited toward outdoor and recreational destinations rather than pure interstate coverage. Rivian has been opening sites to other CCS and NACS vehicles.
+
+### Walmart — $0.47/kWh
+URL: https://wattway.net/charging-networks/walmart
+
+Walmart's own in-house fast-charging network, distinct from the Electrify America stalls long sited in Walmart parking lots. It rarely publishes a public rate, so WattWay prices it from reported market rates, which run roughly $0.40-$0.57/kWh.
+
+### ChargePoint — $0.48/kWh
+URL: https://wattway.net/charging-networks/chargepoint
+
+Less a single network than a platform: most ChargePoint hardware is owned and priced by the site host, so the rate you pay varies far more site-to-site than on an operator-run network. Coverage is broad but heavily weighted toward Level 2.
+
+### Volta — $0.49/kWh
+URL: https://wattway.net/charging-networks/volta
+
+An advertising-subsidized network now owned by Shell, concentrated at retail and grocery sites. Historically known for free Level 2 charging; its DC fast chargers are paid.
+
+### Shell Recharge — $0.52/kWh
+URL: https://wattway.net/charging-networks/shell-recharge
+
+Shell's EV charging arm, often co-located with fuel retail. Its Shell Recharge Plus subscription trims roughly $0.07/kWh off the standard rate.
+
+### bp pulse — $0.55/kWh
+URL: https://wattway.net/charging-networks/bp-pulse
+
+BP's charging network, expanding through fuel-retail sites and its acquisition of the former AMPLY and TravelCenters of America locations, which puts it on long-haul truck-stop corridors.
+
+### EVgo — $0.55/kWh
+URL: https://wattway.net/charging-networks/evgo
+
+One of the older US DC fast-charging networks, concentrated in metro areas and retail lots rather than along rural interstates. Its EVgo Plus subscription lowers the per-kWh rate.
+
+### Electrify America — $0.56/kWh
+URL: https://wattway.net/charging-networks/electrify-america
+
+A national CCS network built out of Volkswagen's dieselgate settlement, with heavy coverage along interstate corridors and in retail parking lots. Its Pass+ subscription trades a small monthly fee for a lower per-kWh rate.
+
+### Blink — $0.59/kWh
+URL: https://wattway.net/charging-networks/blink
+
+A national operator with a mix of owned and host-owned equipment. Historically among the more expensive per-kWh options, and its DC fast-charging footprint is thinner than its Level 2 footprint.
+
+## Charging memberships
+
+- **Tesla Supercharging Membership** (Tesla): $12.99/month, $0.10/kWh off the per-kWh rate. Break-even at a 55 kWh session: 3 sessions/month.
+- **Electrify America Pass+** (Electrify America): $4.00/month, $0.10/kWh off the per-kWh rate. Break-even at a 55 kWh session: 1 sessions/month.
+- **EVgo Plus** (EVgo): $6.99/month, $0.10/kWh off the per-kWh rate. Break-even at a 55 kWh session: 2 sessions/month.
+- **Shell Recharge Plus** (Shell Recharge): $4.99/month, $0.07/kWh off the per-kWh rate. Break-even at a 55 kWh session: 2 sessions/month.
+
+## Vehicles
+
+177 profiles across 27 makes, split by spec generation. Columns: usable battery (kWh), EPA range (mi), peak DC charge rate (kW), efficiency (mi/kWh), energy moved in a 10-80% charge (kWh), miles added by that charge, best-case charge time (min), and cost per 100 miles at a mid-pack $0.47/kWh.
+
+| Vehicle | Years | kWh | Range | Peak kW | mi/kWh | Charge kWh | Charge mi | Charge min | $/100mi | URL |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| Acura ZDX AWD | 2024-2025 | 102 | 304 | 190 | 2.98 | 71.4 | 213 | 27 | 15.77 | https://wattway.net/ev/acura-zdx-awd-2024-2025 |
+| Acura ZDX RWD | 2024-2025 | 102 | 313 | 190 | 3.07 | 71.4 | 219 | 27 | 15.31 | https://wattway.net/ev/acura-zdx-rwd-2024-2025 |
+| Audi e-tron 55 quattro | 2019-2020 | 83.6 | 204 | 150 | 2.44 | 58.5 | 143 | 28 | 19.26 | https://wattway.net/ev/audi-e-tron-55-quattro-2019-2020 |
+| Audi e-tron 55 quattro | 2021 | 86.5 | 222 | 150 | 2.57 | 60.6 | 156 | 28 | 18.29 | https://wattway.net/ev/audi-e-tron-55-quattro-2021 |
+| Audi e-tron GT | 2022-2023 | 84 | 238 | 270 | 2.83 | 58.8 | 166 | 15 | 16.61 | https://wattway.net/ev/audi-e-tron-gt-2022-2023 |
+| Audi e-tron GT | 2024 | 84 | 249 | 270 | 2.96 | 58.8 | 174 | 15 | 15.88 | https://wattway.net/ev/audi-e-tron-gt-2024 |
+| Audi Q4 45 e-tron | 2025 | 77 | 288 | 175 | 3.74 | 53.9 | 202 | 22 | 12.57 | https://wattway.net/ev/audi-q4-45-e-tron-2025 |
+| Audi Q4 55 e-tron quattro | 2025 | 77 | 258 | 175 | 3.35 | 53.9 | 181 | 22 | 14.03 | https://wattway.net/ev/audi-q4-55-e-tron-quattro-2025 |
+| Audi Q6 e-tron (RWD) | 2025-2026 | 94.9 | 321 | 260 | 3.38 | 66.4 | 225 | 18 | 13.91 | https://wattway.net/ev/audi-q6-e-tron-rwd-2025-2026 |
+| Audi Q6 e-tron quattro | 2025-2026 | 94.9 | 307 | 260 | 3.23 | 66.4 | 215 | 18 | 14.55 | https://wattway.net/ev/audi-q6-e-tron-quattro-2025-2026 |
+| Audi Q8 e-tron | 2024 | 106 | 285 | 170 | 2.69 | 74.2 | 200 | 31 | 17.47 | https://wattway.net/ev/audi-q8-e-tron-2024 |
+| Audi Q8 e-tron | 2025 | 106 | 272 | 170 | 2.57 | 74.2 | 191 | 31 | 18.29 | https://wattway.net/ev/audi-q8-e-tron-2025 |
+| BMW i3 (120 Ah) | 2019-2021 | 37.9 | 153 | 50 | 4.04 | 26.5 | 107 | 37 | 11.63 | https://wattway.net/ev/bmw-i3-120-ah-2019-2021 |
+| BMW i4 eDrive40 | 2022-2024 | 83.9 | 301 | 205 | 3.59 | 58.7 | 211 | 20 | 13.09 | https://wattway.net/ev/bmw-i4-edrive40-2022-2024 |
+| BMW i4 M50 | 2022-2024 | 81.5 | 270 | 205 | 3.31 | 57.1 | 189 | 20 | 14.20 | https://wattway.net/ev/bmw-i4-m50-2022-2024 |
+| BMW i5 eDrive40 | 2024 | 81.2 | 295 | 205 | 3.63 | 56.8 | 206 | 20 | 12.95 | https://wattway.net/ev/bmw-i5-edrive40-2024 |
+| BMW i7 M70 | 2024-2025 | 101.7 | 274 | 195 | 2.69 | 71.2 | 192 | 26 | 17.47 | https://wattway.net/ev/bmw-i7-m70-2024-2025 |
+| BMW i7 xDrive60 | 2023-2024 | 101.7 | 317 | 195 | 3.12 | 71.2 | 222 | 26 | 15.06 | https://wattway.net/ev/bmw-i7-xdrive60-2023-2024 |
+| BMW iX M60 | 2022-2023 | 106.3 | 280 | 195 | 2.63 | 74.4 | 196 | 27 | 17.87 | https://wattway.net/ev/bmw-ix-m60-2022-2023 |
+| BMW iX M60 | 2024 | 106.3 | 296 | 195 | 2.78 | 74.4 | 207 | 27 | 16.91 | https://wattway.net/ev/bmw-ix-m60-2024 |
+| BMW iX M60 | 2025 | 106.3 | 284 | 195 | 2.67 | 74.4 | 199 | 27 | 17.60 | https://wattway.net/ev/bmw-ix-m60-2025 |
+| BMW iX xDrive50 | 2023-2024 | 105.2 | 324 | 195 | 3.08 | 73.6 | 227 | 27 | 15.26 | https://wattway.net/ev/bmw-ix-xdrive50-2023-2024 |
+| Cadillac Escalade IQ | 2025-2026 | 205 | 460 | 350 | 2.24 | 143.5 | 321 | 29 | 20.98 | https://wattway.net/ev/cadillac-escalade-iq-2025-2026 |
+| Cadillac Lyriq AWD | 2024 | 102 | 307 | 190 | 3.01 | 71.4 | 215 | 27 | 15.61 | https://wattway.net/ev/cadillac-lyriq-awd-2024 |
+| Cadillac Lyriq AWD | 2025 | 102 | 319 | 190 | 3.13 | 71.4 | 223 | 27 | 15.02 | https://wattway.net/ev/cadillac-lyriq-awd-2025 |
+| Cadillac Lyriq RWD | 2024 | 102 | 314 | 190 | 3.08 | 71.4 | 220 | 27 | 15.26 | https://wattway.net/ev/cadillac-lyriq-rwd-2024 |
+| Cadillac Lyriq RWD | 2025 | 102 | 326 | 190 | 3.20 | 71.4 | 228 | 27 | 14.69 | https://wattway.net/ev/cadillac-lyriq-rwd-2025 |
+| Cadillac Optiq | 2025-2026 | 85 | 302 | 150 | 3.55 | 59.5 | 211 | 28 | 13.24 | https://wattway.net/ev/cadillac-optiq-2025-2026 |
+| Cadillac Vistiq | 2026 | 102 | 305 | 190 | 2.99 | 71.4 | 213 | 27 | 15.72 | https://wattway.net/ev/cadillac-vistiq-2026 |
+| Chevrolet Blazer EV AWD | 2024 | 85 | 279 | 150 | 3.28 | 59.5 | 195 | 28 | 14.33 | https://wattway.net/ev/chevrolet-blazer-ev-awd-2024 |
+| Chevrolet Blazer EV RWD | 2024 | 102 | 324 | 190 | 3.18 | 71.4 | 227 | 27 | 14.78 | https://wattway.net/ev/chevrolet-blazer-ev-rwd-2024 |
+| Chevrolet Bolt EUV | 2022-2023 | 65 | 247 | 55 | 3.80 | 45.5 | 173 | 58 | 12.37 | https://wattway.net/ev/chevrolet-bolt-euv-2022-2023 |
+| Chevrolet Bolt EV | 2017-2019 | 60 | 238 | 55 | 3.97 | 42.0 | 167 | 54 | 11.84 | https://wattway.net/ev/chevrolet-bolt-ev-2017-2019 |
+| Chevrolet Bolt EV | 2020-2021 | 66 | 259 | 55 | 3.92 | 46.2 | 181 | 59 | 11.99 | https://wattway.net/ev/chevrolet-bolt-ev-2020-2021 |
+| Chevrolet Bolt EV | 2022-2023 | 65 | 259 | 55 | 3.98 | 45.5 | 181 | 58 | 11.81 | https://wattway.net/ev/chevrolet-bolt-ev-2022-2023 |
+| Chevrolet Equinox EV AWD | 2025-2026 | 85 | 307 | 150 | 3.61 | 59.5 | 215 | 28 | 13.02 | https://wattway.net/ev/chevrolet-equinox-ev-awd-2025-2026 |
+| Chevrolet Equinox EV FWD | 2025-2026 | 85 | 319 | 150 | 3.75 | 59.5 | 223 | 28 | 12.53 | https://wattway.net/ev/chevrolet-equinox-ev-fwd-2025-2026 |
+| Chevrolet Silverado EV 3WT | 2024 | 170 | 393 | 350 | 2.31 | 119.0 | 275 | 24 | 20.35 | https://wattway.net/ev/chevrolet-silverado-ev-3wt-2024 |
+| Chevrolet Silverado EV 4WT | 2024 | 205 | 450 | 350 | 2.20 | 143.5 | 316 | 29 | 21.36 | https://wattway.net/ev/chevrolet-silverado-ev-4wt-2024 |
+| Chevrolet Silverado EV RST First Edition | 2024 | 205 | 440 | 350 | 2.15 | 143.5 | 309 | 29 | 21.86 | https://wattway.net/ev/chevrolet-silverado-ev-rst-first-edition-2024 |
+| Chevrolet Silverado EV RST Max Range | 2025 | 205 | 460 | 350 | 2.24 | 143.5 | 321 | 29 | 20.98 | https://wattway.net/ev/chevrolet-silverado-ev-rst-max-range-2025 |
+| Chevrolet Silverado EV WT Max Range | 2025 | 205 | 492 | 350 | 2.40 | 143.5 | 344 | 29 | 19.58 | https://wattway.net/ev/chevrolet-silverado-ev-wt-max-range-2025 |
+| Dodge Charger Daytona R/T | 2024-2025 | 93.9 | 308 | 183 | 3.28 | 65.7 | 216 | 25 | 14.33 | https://wattway.net/ev/dodge-charger-daytona-r-t-2024-2025 |
+| Dodge Charger Daytona Scat Pack | 2024-2025 | 93.9 | 241 | 183 | 2.57 | 65.7 | 169 | 25 | 18.29 | https://wattway.net/ev/dodge-charger-daytona-scat-pack-2024-2025 |
+| Ford F-150 Lightning ER | 2022-2024 | 131 | 320 | 150 | 2.44 | 91.7 | 224 | 43 | 19.26 | https://wattway.net/ev/ford-f-150-lightning-er-2022-2024 |
+| Ford F-150 Lightning ER | 2025 | 131 | 320 | 150 | 2.44 | 91.7 | 224 | 43 | 19.26 | https://wattway.net/ev/ford-f-150-lightning-er-2025 |
+| Ford F-150 Lightning SR | 2022 | 98 | 230 | 150 | 2.35 | 68.6 | 161 | 32 | 20.00 | https://wattway.net/ev/ford-f-150-lightning-sr-2022 |
+| Ford F-150 Lightning SR | 2023-2025 | 98 | 240 | 150 | 2.45 | 68.6 | 168 | 32 | 19.18 | https://wattway.net/ev/ford-f-150-lightning-sr-2023-2025 |
+| Ford Mustang Mach-E ER RWD | 2024 | 91 | 320 | 150 | 3.52 | 63.7 | 224 | 30 | 13.35 | https://wattway.net/ev/ford-mustang-mach-e-er-rwd-2024 |
+| Ford Mustang Mach-E GT | 2024-2025 | 91 | 280 | 150 | 3.08 | 63.7 | 196 | 30 | 15.26 | https://wattway.net/ev/ford-mustang-mach-e-gt-2024-2025 |
+| Ford Mustang Mach-E Select RWD | 2023-2024 | 72 | 250 | 115 | 3.47 | 50.4 | 175 | 31 | 13.54 | https://wattway.net/ev/ford-mustang-mach-e-select-rwd-2023-2024 |
+| Ford Mustang Mach-E Select RWD | 2025 | 72 | 260 | 115 | 3.61 | 50.4 | 182 | 31 | 13.02 | https://wattway.net/ev/ford-mustang-mach-e-select-rwd-2025 |
+| Genesis Electrified G80 | 2023-2025 | 87.2 | 282 | 187 | 3.23 | 61.0 | 197 | 23 | 14.55 | https://wattway.net/ev/genesis-electrified-g80-2023-2025 |
+| Genesis Electrified GV70 | 2023-2025 | 77.4 | 236 | 235 | 3.05 | 54.2 | 165 | 16 | 15.41 | https://wattway.net/ev/genesis-electrified-gv70-2023-2025 |
+| Genesis GV60 Advanced AWD | 2023-2025 | 77.4 | 248 | 235 | 3.20 | 54.2 | 173 | 16 | 14.69 | https://wattway.net/ev/genesis-gv60-advanced-awd-2023-2025 |
+| Genesis GV60 Performance AWD | 2023-2025 | 77.4 | 235 | 235 | 3.04 | 54.2 | 165 | 16 | 15.46 | https://wattway.net/ev/genesis-gv60-performance-awd-2023-2025 |
+| Genesis GV60 Standard RWD | 2024-2025 | 77.4 | 294 | 235 | 3.80 | 54.2 | 206 | 16 | 12.37 | https://wattway.net/ev/genesis-gv60-standard-rwd-2024-2025 |
+| GMC Hummer EV Pickup Edition 1 | 2022-2023 | 205 | 329 | 300 | 1.60 | 143.5 | 230 | 34 | 29.38 | https://wattway.net/ev/gmc-hummer-ev-pickup-edition-1-2022-2023 |
+| GMC Hummer EV SUV | 2024-2025 | 170 | 314 | 300 | 1.85 | 119.0 | 220 | 28 | 25.41 | https://wattway.net/ev/gmc-hummer-ev-suv-2024-2025 |
+| GMC Sierra EV Denali Edition 1 | 2024 | 205 | 440 | 350 | 2.15 | 143.5 | 309 | 29 | 21.86 | https://wattway.net/ev/gmc-sierra-ev-denali-edition-1-2024 |
+| GMC Sierra EV Denali Max Range | 2025 | 205 | 460 | 350 | 2.24 | 143.5 | 321 | 29 | 20.98 | https://wattway.net/ev/gmc-sierra-ev-denali-max-range-2025 |
+| Honda Prologue AWD | 2024-2025 | 85 | 273 | 150 | 3.21 | 59.5 | 191 | 28 | 14.64 | https://wattway.net/ev/honda-prologue-awd-2024-2025 |
+| Honda Prologue FWD | 2024-2025 | 85 | 296 | 150 | 3.48 | 59.5 | 207 | 28 | 13.51 | https://wattway.net/ev/honda-prologue-fwd-2024-2025 |
+| Hyundai IONIQ 5 Limited AWD (20-in) | 2025-2026 | 84 | 269 | 258 | 3.20 | 58.8 | 188 | 16 | 14.69 | https://wattway.net/ev/hyundai-ioniq-5-limited-awd-20-in-2025-2026 |
+| Hyundai IONIQ 5 LR AWD | 2022 | 77.4 | 256 | 233 | 3.31 | 54.2 | 179 | 16 | 14.20 | https://wattway.net/ev/hyundai-ioniq-5-lr-awd-2022 |
+| Hyundai IONIQ 5 LR AWD | 2023 | 77.4 | 266 | 233 | 3.44 | 54.2 | 186 | 16 | 13.66 | https://wattway.net/ev/hyundai-ioniq-5-lr-awd-2023 |
+| Hyundai IONIQ 5 LR AWD | 2024 | 77.4 | 260 | 233 | 3.36 | 54.2 | 182 | 16 | 13.99 | https://wattway.net/ev/hyundai-ioniq-5-lr-awd-2024 |
+| Hyundai IONIQ 5 LR AWD | 2025-2026 | 84 | 290 | 258 | 3.45 | 58.8 | 203 | 16 | 13.62 | https://wattway.net/ev/hyundai-ioniq-5-lr-awd-2025-2026 |
+| Hyundai IONIQ 5 LR RWD | 2022-2024 | 77.4 | 303 | 233 | 3.91 | 54.2 | 212 | 16 | 12.02 | https://wattway.net/ev/hyundai-ioniq-5-lr-rwd-2022-2024 |
+| Hyundai IONIQ 5 LR RWD | 2025 | 84 | 318 | 258 | 3.79 | 58.8 | 223 | 16 | 12.40 | https://wattway.net/ev/hyundai-ioniq-5-lr-rwd-2025 |
+| Hyundai IONIQ 5 N | 2025-2026 | 84 | 221 | 238 | 2.63 | 58.8 | 155 | 17 | 17.87 | https://wattway.net/ev/hyundai-ioniq-5-n-2025-2026 |
+| Hyundai IONIQ 5 SE Standard Range RWD | 2022-2024 | 58 | 220 | 175 | 3.79 | 40.6 | 154 | 16 | 12.40 | https://wattway.net/ev/hyundai-ioniq-5-se-standard-range-rwd-2022-2024 |
+| Hyundai IONIQ 5 SE Standard Range RWD | 2025-2026 | 63 | 245 | 175 | 3.89 | 44.1 | 172 | 18 | 12.08 | https://wattway.net/ev/hyundai-ioniq-5-se-standard-range-rwd-2025-2026 |
+| Hyundai IONIQ 5 XRT AWD | 2025-2026 | 84 | 259 | 258 | 3.08 | 58.8 | 181 | 16 | 15.26 | https://wattway.net/ev/hyundai-ioniq-5-xrt-awd-2025-2026 |
+| Hyundai IONIQ 6 SE AWD (18-in) | 2023-2025 | 77.4 | 316 | 233 | 4.08 | 54.2 | 221 | 16 | 11.52 | https://wattway.net/ev/hyundai-ioniq-6-se-awd-18-in-2023-2025 |
+| Hyundai IONIQ 6 SE LR RWD (18-in) | 2023-2024 | 77.4 | 361 | 233 | 4.67 | 54.2 | 253 | 16 | 10.06 | https://wattway.net/ev/hyundai-ioniq-6-se-lr-rwd-18-in-2023-2024 |
+| Hyundai IONIQ 6 SE LR RWD (18-in) | 2025 | 77.4 | 342 | 233 | 4.42 | 54.2 | 239 | 16 | 10.63 | https://wattway.net/ev/hyundai-ioniq-6-se-lr-rwd-18-in-2025 |
+| Hyundai IONIQ 6 SE Standard Range RWD | 2023-2025 | 53 | 240 | 175 | 4.53 | 37.1 | 168 | 15 | 10.38 | https://wattway.net/ev/hyundai-ioniq-6-se-standard-range-rwd-2023-2025 |
+| Hyundai IONIQ 6 SEL/Limited AWD (20-in) | 2023-2025 | 77.4 | 270 | 233 | 3.49 | 54.2 | 189 | 16 | 13.47 | https://wattway.net/ev/hyundai-ioniq-6-sel-limited-awd-20-in-2023-2025 |
+| Hyundai IONIQ 6 SEL/Limited RWD (20-in) | 2023-2024 | 77.4 | 305 | 233 | 3.94 | 54.2 | 213 | 16 | 11.93 | https://wattway.net/ev/hyundai-ioniq-6-sel-limited-rwd-20-in-2023-2024 |
+| Hyundai IONIQ 6 SEL/Limited RWD (20-in) | 2025 | 77.4 | 291 | 233 | 3.76 | 54.2 | 204 | 16 | 12.50 | https://wattway.net/ev/hyundai-ioniq-6-sel-limited-rwd-20-in-2025 |
+| Hyundai IONIQ 9 LR AWD | 2026 | 110.3 | 320 | 350 | 2.90 | 77.2 | 224 | 16 | 16.21 | https://wattway.net/ev/hyundai-ioniq-9-lr-awd-2026 |
+| Hyundai IONIQ 9 LR RWD | 2026 | 110.3 | 335 | 350 | 3.04 | 77.2 | 235 | 16 | 15.46 | https://wattway.net/ev/hyundai-ioniq-9-lr-rwd-2026 |
+| Hyundai IONIQ 9 Performance AWD | 2026 | 110.3 | 311 | 350 | 2.82 | 77.2 | 218 | 16 | 16.67 | https://wattway.net/ev/hyundai-ioniq-9-performance-awd-2026 |
+| Hyundai IONIQ Electric | 2017-2019 | 28 | 124 | 70 | 4.43 | 19.6 | 87 | 20 | 10.61 | https://wattway.net/ev/hyundai-ioniq-electric-2017-2019 |
+| Hyundai IONIQ Electric Limited | 2020-2021 | 38.3 | 170 | 50 | 4.44 | 26.8 | 119 | 38 | 10.59 | https://wattway.net/ev/hyundai-ioniq-electric-limited-2020-2021 |
+| Hyundai Kona Electric (Gen 1) | 2019-2023 | 64 | 258 | 77 | 4.03 | 44.8 | 181 | 41 | 11.66 | https://wattway.net/ev/hyundai-kona-electric-gen-1-2019-2023 |
+| Hyundai Kona Electric SE | 2024-2025 | 48.6 | 200 | 85 | 4.12 | 34.0 | 140 | 28 | 11.41 | https://wattway.net/ev/hyundai-kona-electric-se-2024-2025 |
+| Hyundai Kona Electric SEL/Limited | 2024-2025 | 64.8 | 261 | 100 | 4.03 | 45.4 | 183 | 32 | 11.66 | https://wattway.net/ev/hyundai-kona-electric-sel-limited-2024-2025 |
+| Jaguar I-Pace EV400 | 2020-2021 | 84.7 | 234 | 100 | 2.76 | 59.3 | 164 | 42 | 17.03 | https://wattway.net/ev/jaguar-i-pace-ev400-2020-2021 |
+| Jaguar I-Pace EV400 | 2022-2024 | 84.7 | 246 | 100 | 2.90 | 59.3 | 172 | 42 | 16.21 | https://wattway.net/ev/jaguar-i-pace-ev400-2022-2024 |
+| Jeep Wagoneer S | 2024-2025 | 93 | 303 | 200 | 3.26 | 65.1 | 212 | 23 | 14.42 | https://wattway.net/ev/jeep-wagoneer-s-2024-2025 |
+| Kia EV6 GT | 2023 | 77.4 | 206 | 233 | 2.66 | 54.2 | 144 | 16 | 17.67 | https://wattway.net/ev/kia-ev6-gt-2023 |
+| Kia EV6 GT | 2024 | 77.4 | 218 | 233 | 2.82 | 54.2 | 153 | 16 | 16.67 | https://wattway.net/ev/kia-ev6-gt-2024 |
+| Kia EV6 GT-Line AWD | 2023-2024 | 77.4 | 252 | 233 | 3.26 | 54.2 | 177 | 16 | 14.42 | https://wattway.net/ev/kia-ev6-gt-line-awd-2023-2024 |
+| Kia EV6 GT-Line AWD | 2025 | 84 | 270 | 240 | 3.21 | 58.8 | 189 | 17 | 14.64 | https://wattway.net/ev/kia-ev6-gt-line-awd-2025 |
+| Kia EV6 Light RWD | 2022-2024 | 58 | 232 | 180 | 4.00 | 40.6 | 162 | 16 | 11.75 | https://wattway.net/ev/kia-ev6-light-rwd-2022-2024 |
+| Kia EV6 LR RWD | 2022-2024 | 77.4 | 310 | 233 | 4.00 | 54.2 | 217 | 16 | 11.75 | https://wattway.net/ev/kia-ev6-lr-rwd-2022-2024 |
+| Kia EV6 LR RWD | 2025 | 84 | 319 | 240 | 3.80 | 58.8 | 223 | 17 | 12.37 | https://wattway.net/ev/kia-ev6-lr-rwd-2025 |
+| Kia EV6 Wind AWD | 2022 | 77.4 | 274 | 233 | 3.54 | 54.2 | 192 | 16 | 13.28 | https://wattway.net/ev/kia-ev6-wind-awd-2022 |
+| Kia EV6 Wind AWD | 2023-2024 | 77.4 | 282 | 233 | 3.64 | 54.2 | 197 | 16 | 12.91 | https://wattway.net/ev/kia-ev6-wind-awd-2023-2024 |
+| Kia EV6 Wind AWD | 2025 | 84 | 295 | 240 | 3.51 | 58.8 | 206 | 17 | 13.39 | https://wattway.net/ev/kia-ev6-wind-awd-2025 |
+| Kia EV9 LR AWD | 2024-2025 | 99.8 | 280 | 210 | 2.81 | 69.9 | 196 | 23 | 16.73 | https://wattway.net/ev/kia-ev9-lr-awd-2024-2025 |
+| Kia Niro EV | 2019-2022 | 64 | 239 | 77 | 3.73 | 44.8 | 167 | 41 | 12.60 | https://wattway.net/ev/kia-niro-ev-2019-2022 |
+| Kia Niro EV | 2023-2025 | 64.8 | 253 | 85 | 3.90 | 45.4 | 177 | 38 | 12.05 | https://wattway.net/ev/kia-niro-ev-2023-2025 |
+| Kia Soul EV | 2020 | 64 | 243 | 77 | 3.80 | 44.8 | 170 | 41 | 12.37 | https://wattway.net/ev/kia-soul-ev-2020 |
+| Lexus RZ 450e (18-in) | 2023-2025 | 63.4 | 220 | 150 | 3.47 | 44.4 | 154 | 21 | 13.54 | https://wattway.net/ev/lexus-rz-450e-18-in-2023-2025 |
+| Lexus RZ 450e Luxury (20-in) | 2023-2025 | 63.4 | 196 | 150 | 3.09 | 44.4 | 137 | 21 | 15.21 | https://wattway.net/ev/lexus-rz-450e-luxury-20-in-2023-2025 |
+| Lucid Air GT | 2022-2024 | 112 | 516 | 300 | 4.60 | 78.4 | 361 | 18 | 10.22 | https://wattway.net/ev/lucid-air-gt-2022-2024 |
+| Lucid Air Pure | 2024-2025 | 84 | 420 | 250 | 5.00 | 58.8 | 294 | 17 | 9.40 | https://wattway.net/ev/lucid-air-pure-2024-2025 |
+| Lucid Air Touring | 2024-2025 | 92 | 411 | 300 | 4.47 | 64.4 | 288 | 15 | 10.51 | https://wattway.net/ev/lucid-air-touring-2024-2025 |
+| Lucid Gravity Grand Touring | 2025-2026 | 123 | 450 | 400 | 3.66 | 86.1 | 315 | 15 | 12.84 | https://wattway.net/ev/lucid-gravity-grand-touring-2025-2026 |
+| Lucid Gravity Touring | 2025-2026 | 89 | 337 | 300 | 3.79 | 62.3 | 236 | 15 | 12.40 | https://wattway.net/ev/lucid-gravity-touring-2025-2026 |
+| Mercedes-Benz EQB 300 4MATIC | 2022-2023 | 66.5 | 243 | 100 | 3.65 | 46.6 | 170 | 33 | 12.88 | https://wattway.net/ev/mercedes-benz-eqb-300-4matic-2022-2023 |
+| Mercedes-Benz EQB 300 4MATIC | 2024-2025 | 66.5 | 205 | 100 | 3.08 | 46.6 | 143 | 33 | 15.26 | https://wattway.net/ev/mercedes-benz-eqb-300-4matic-2024-2025 |
+| Mercedes-Benz EQE 350+ | 2023 | 90.6 | 305 | 170 | 3.37 | 63.4 | 214 | 26 | 13.95 | https://wattway.net/ev/mercedes-benz-eqe-350-2023 |
+| Mercedes-Benz EQE 350+ | 2024 | 96.1 | 305 | 170 | 3.17 | 67.3 | 213 | 28 | 14.83 | https://wattway.net/ev/mercedes-benz-eqe-350-2024 |
+| Mercedes-Benz EQE SUV 350+ (RWD) | 2024-2025 | 96.1 | 307 | 170 | 3.19 | 67.3 | 215 | 28 | 14.73 | https://wattway.net/ev/mercedes-benz-eqe-suv-350-rwd-2024-2025 |
+| Mercedes-Benz EQS 450+ | 2022-2024 | 107.8 | 350 | 200 | 3.25 | 75.5 | 245 | 27 | 14.46 | https://wattway.net/ev/mercedes-benz-eqs-450-2022-2024 |
+| Mercedes-Benz EQS SUV 450+ | 2023 | 107.8 | 305 | 200 | 2.83 | 75.5 | 214 | 27 | 16.61 | https://wattway.net/ev/mercedes-benz-eqs-suv-450-2023 |
+| Mercedes-Benz EQS SUV 450+ | 2024 | 107.8 | 339 | 200 | 3.14 | 75.5 | 237 | 27 | 14.97 | https://wattway.net/ev/mercedes-benz-eqs-suv-450-2024 |
+| Mercedes-Benz EQS SUV 450+ | 2025 | 118 | 323 | 200 | 2.74 | 82.6 | 226 | 29 | 17.15 | https://wattway.net/ev/mercedes-benz-eqs-suv-450-2025 |
+| Mercedes-Benz G 580 | 2025-2026 | 116 | 240 | 200 | 2.07 | 81.2 | 168 | 29 | 22.71 | https://wattway.net/ev/mercedes-benz-g-580-2025-2026 |
+| Mini Cooper SE | 2020-2024 | 28.9 | 114 | 50 | 3.94 | 20.2 | 80 | 29 | 11.93 | https://wattway.net/ev/mini-cooper-se-2020-2024 |
+| Mini Countryman SE ALL4 | 2025-2026 | 64.6 | 212 | 130 | 3.28 | 45.2 | 148 | 25 | 14.33 | https://wattway.net/ev/mini-countryman-se-all4-2025-2026 |
+| Nissan Ariya Venture+ FWD | 2023-2024 | 87 | 304 | 130 | 3.49 | 60.9 | 213 | 33 | 13.47 | https://wattway.net/ev/nissan-ariya-venture-fwd-2023-2024 |
+| Nissan LEAF (new gen) | 2026 | 75 | 303 | 150 | 4.04 | 52.5 | 212 | 25 | 11.63 | https://wattway.net/ev/nissan-leaf-new-gen-2026 |
+| Polestar 2 LR Single Motor | 2022-2023 | 75 | 270 | 150 | 3.60 | 52.5 | 189 | 25 | 13.06 | https://wattway.net/ev/polestar-2-lr-single-motor-2022-2023 |
+| Polestar 2 LR Single Motor | 2024 | 82 | 320 | 205 | 3.90 | 57.4 | 224 | 20 | 12.05 | https://wattway.net/ev/polestar-2-lr-single-motor-2024 |
+| Polestar 2 LR Single Motor | 2025 | 82 | 314 | 205 | 3.83 | 57.4 | 220 | 20 | 12.27 | https://wattway.net/ev/polestar-2-lr-single-motor-2025 |
+| Polestar 3 LR Dual Motor | 2024-2025 | 107 | 315 | 250 | 2.94 | 74.9 | 220 | 21 | 15.99 | https://wattway.net/ev/polestar-3-lr-dual-motor-2024-2025 |
+| Polestar 4 LR Single Motor | 2025-2026 | 94 | 310 | 200 | 3.30 | 65.8 | 217 | 23 | 14.24 | https://wattway.net/ev/polestar-4-lr-single-motor-2025-2026 |
+| Porsche Macan 4 | 2024-2025 | 95 | 308 | 270 | 3.24 | 66.5 | 215 | 17 | 14.51 | https://wattway.net/ev/porsche-macan-4-2024-2025 |
+| Porsche Macan 4S | 2024-2025 | 95 | 288 | 270 | 3.03 | 66.5 | 201 | 17 | 15.51 | https://wattway.net/ev/porsche-macan-4s-2024-2025 |
+| Porsche Macan Turbo | 2024-2025 | 95 | 277 | 270 | 2.92 | 66.5 | 194 | 17 | 16.10 | https://wattway.net/ev/porsche-macan-turbo-2024-2025 |
+| Porsche Taycan 4S | 2025 | 97 | 315 | 320 | 3.25 | 67.9 | 221 | 15 | 14.46 | https://wattway.net/ev/porsche-taycan-4s-2025 |
+| Porsche Taycan RWD | 2025 | 97 | 318 | 320 | 3.28 | 67.9 | 223 | 15 | 14.33 | https://wattway.net/ev/porsche-taycan-rwd-2025 |
+| Rivian R1S Large Pack (Dual Motor) | 2023-2024 | 135 | 352 | 220 | 2.61 | 94.5 | 247 | 30 | 18.01 | https://wattway.net/ev/rivian-r1s-large-pack-dual-motor-2023-2024 |
+| Rivian R1S Max Pack | 2024-2025 | 141 | 400 | 220 | 2.84 | 98.7 | 280 | 32 | 16.55 | https://wattway.net/ev/rivian-r1s-max-pack-2024-2025 |
+| Rivian R1T Large Pack (Gen 1) | 2022-2024 | 135 | 314 | 220 | 2.33 | 94.5 | 220 | 30 | 20.17 | https://wattway.net/ev/rivian-r1t-large-pack-gen-1-2022-2024 |
+| Rivian R1T Max Pack | 2024-2025 | 141 | 410 | 220 | 2.91 | 98.7 | 287 | 32 | 16.15 | https://wattway.net/ev/rivian-r1t-max-pack-2024-2025 |
+| Subaru Solterra AWD (XT/Touring) | 2026 | 74.7 | 278 | 150 | 3.72 | 52.3 | 195 | 25 | 12.63 | https://wattway.net/ev/subaru-solterra-awd-xt-touring-2026 |
+| Subaru Solterra Limited/Touring AWD | 2023-2025 | 64 | 222 | 100 | 3.47 | 44.8 | 155 | 32 | 13.54 | https://wattway.net/ev/subaru-solterra-limited-touring-awd-2023-2025 |
+| Subaru Solterra Premium AWD | 2023-2025 | 64 | 228 | 100 | 3.56 | 44.8 | 159 | 32 | 13.20 | https://wattway.net/ev/subaru-solterra-premium-awd-2023-2025 |
+| Subaru Solterra Premium AWD | 2026 | 74.7 | 288 | 150 | 3.86 | 52.3 | 202 | 25 | 12.18 | https://wattway.net/ev/subaru-solterra-premium-awd-2026 |
+| Tesla Cybertruck AWD | 2024 | 122.4 | 340 | 325 | 2.78 | 85.7 | 238 | 19 | 16.91 | https://wattway.net/ev/tesla-cybertruck-awd-2024 |
+| Tesla Cybertruck AWD | 2025 | 122.4 | 325 | 325 | 2.66 | 85.7 | 228 | 19 | 17.67 | https://wattway.net/ev/tesla-cybertruck-awd-2025 |
+| Tesla Model 3 LR AWD | 2021-2023 | 82 | 358 | 250 | 4.37 | 57.4 | 251 | 16 | 10.76 | https://wattway.net/ev/tesla-model-3-lr-awd-2021-2023 |
+| Tesla Model 3 LR AWD (Highland) | 2024-2025 | 79 | 341 | 250 | 4.32 | 55.3 | 239 | 16 | 10.88 | https://wattway.net/ev/tesla-model-3-lr-awd-highland-2024-2025 |
+| Tesla Model 3 LR RWD (Highland) | 2024-2025 | 79 | 363 | 250 | 4.59 | 55.3 | 254 | 16 | 10.24 | https://wattway.net/ev/tesla-model-3-lr-rwd-highland-2024-2025 |
+| Tesla Model 3 Performance (Highland) | 2024 | 79 | 303 | 250 | 3.84 | 55.3 | 212 | 16 | 12.24 | https://wattway.net/ev/tesla-model-3-performance-highland-2024 |
+| Tesla Model 3 Performance (Highland) | 2025 | 79 | 298 | 250 | 3.77 | 55.3 | 208 | 16 | 12.47 | https://wattway.net/ev/tesla-model-3-performance-highland-2025 |
+| Tesla Model 3 RWD (Highland) | 2024 | 60 | 272 | 170 | 4.53 | 42.0 | 190 | 17 | 10.38 | https://wattway.net/ev/tesla-model-3-rwd-highland-2024 |
+| Tesla Model S | 2021-2024 | 100 | 405 | 250 | 4.05 | 70.0 | 284 | 20 | 11.60 | https://wattway.net/ev/tesla-model-s-2021-2024 |
+| Tesla Model X LR AWD | 2024 | 100 | 335 | 250 | 3.35 | 70.0 | 235 | 20 | 14.03 | https://wattway.net/ev/tesla-model-x-lr-awd-2024 |
+| Tesla Model X LR AWD | 2025 | 100 | 329 | 250 | 3.29 | 70.0 | 230 | 20 | 14.29 | https://wattway.net/ev/tesla-model-x-lr-awd-2025 |
+| Tesla Model Y LR AWD | 2021-2023 | 82 | 330 | 250 | 4.02 | 57.4 | 231 | 16 | 11.69 | https://wattway.net/ev/tesla-model-y-lr-awd-2021-2023 |
+| Tesla Model Y LR AWD | 2024 | 82 | 310 | 250 | 3.78 | 57.4 | 217 | 16 | 12.43 | https://wattway.net/ev/tesla-model-y-lr-awd-2024 |
+| Tesla Model Y LR RWD | 2024 | 79 | 320 | 250 | 4.05 | 55.3 | 224 | 16 | 11.60 | https://wattway.net/ev/tesla-model-y-lr-rwd-2024 |
+| Tesla Model Y LR RWD (Juniper) | 2025 | 79 | 337 | 250 | 4.27 | 55.3 | 236 | 16 | 11.01 | https://wattway.net/ev/tesla-model-y-lr-rwd-juniper-2025 |
+| Tesla Model Y Performance | 2023 | 79 | 303 | 250 | 3.84 | 55.3 | 212 | 16 | 12.24 | https://wattway.net/ev/tesla-model-y-performance-2023 |
+| Tesla Model Y Performance | 2024 | 79 | 279 | 250 | 3.53 | 55.3 | 195 | 16 | 13.31 | https://wattway.net/ev/tesla-model-y-performance-2024 |
+| Toyota bZ AWD | 2026 | 74.7 | 288 | 150 | 3.86 | 52.3 | 202 | 25 | 12.18 | https://wattway.net/ev/toyota-bz-awd-2026 |
+| Toyota bZ FWD XLE Plus | 2026 | 74.7 | 314 | 150 | 4.20 | 52.3 | 220 | 25 | 11.19 | https://wattway.net/ev/toyota-bz-fwd-xle-plus-2026 |
+| Toyota bZ4X Limited AWD | 2023-2025 | 65 | 222 | 100 | 3.42 | 45.5 | 156 | 32 | 13.74 | https://wattway.net/ev/toyota-bz4x-limited-awd-2023-2025 |
+| Toyota bZ4X Limited FWD | 2023-2025 | 63 | 236 | 150 | 3.75 | 44.1 | 165 | 21 | 12.53 | https://wattway.net/ev/toyota-bz4x-limited-fwd-2023-2025 |
+| Toyota bZ4X XLE AWD | 2023-2025 | 65 | 228 | 100 | 3.51 | 45.5 | 160 | 32 | 13.39 | https://wattway.net/ev/toyota-bz4x-xle-awd-2023-2025 |
+| Toyota bZ4X XLE FWD | 2023-2025 | 63 | 252 | 150 | 4.00 | 44.1 | 176 | 21 | 11.75 | https://wattway.net/ev/toyota-bz4x-xle-fwd-2023-2025 |
+| Volkswagen e-Golf | 2017-2019 | 32 | 125 | 40 | 3.91 | 22.4 | 88 | 40 | 12.02 | https://wattway.net/ev/volkswagen-e-golf-2017-2019 |
+| Volkswagen ID.4 Pro | 2022 | 82 | 275 | 135 | 3.35 | 57.4 | 192 | 30 | 14.03 | https://wattway.net/ev/volkswagen-id-4-pro-2022 |
+| Volkswagen ID.4 Pro | 2023 | 82 | 275 | 170 | 3.35 | 57.4 | 192 | 24 | 14.03 | https://wattway.net/ev/volkswagen-id-4-pro-2023 |
+| Volkswagen ID.4 Pro | 2024 | 82 | 291 | 175 | 3.55 | 57.4 | 204 | 23 | 13.24 | https://wattway.net/ev/volkswagen-id-4-pro-2024 |
+| Volkswagen ID.Buzz Pro RWD | 2025 | 86 | 234 | 200 | 2.72 | 60.2 | 164 | 21 | 17.28 | https://wattway.net/ev/volkswagen-id-buzz-pro-rwd-2025 |
+| Volvo C40 Recharge Twin AWD | 2023 | 75 | 226 | 150 | 3.01 | 52.5 | 158 | 25 | 15.61 | https://wattway.net/ev/volvo-c40-recharge-twin-awd-2023 |
+| Volvo EX30 Single Motor ER | 2025 | 64 | 261 | 153 | 4.08 | 44.8 | 183 | 21 | 11.52 | https://wattway.net/ev/volvo-ex30-single-motor-er-2025 |
+| Volvo EX90 Twin Motor | 2025 | 107 | 310 | 250 | 2.90 | 74.9 | 217 | 21 | 16.21 | https://wattway.net/ev/volvo-ex90-twin-motor-2025 |
+| Volvo XC40 Recharge Single Motor ER | 2024 | 79 | 293 | 200 | 3.71 | 55.3 | 205 | 20 | 12.67 | https://wattway.net/ev/volvo-xc40-recharge-single-motor-er-2024 |
+
+## Guides
+
+### How Much Does It Cost to Charge an EV on a Road Trip?
+URL: https://wattway.net/guides/ev-road-trip-charging-cost
+
+What DC fast charging actually costs per 100 miles, why it runs several times your home electricity rate, the fees that don't show up in the per-kWh price, and the handful of decisions that genuinely lower the bill.
+
+### How WattWay Plans a Cost-Optimized EV Trip
+URL: https://wattway.net/guides/how-wattway-plans-your-trip
+
+The full method: how WattWay routes a trip, finds chargers along the corridor, prices each one against your memberships, and picks the cheapest workable sequence of stops — plus every assumption it makes and what it deliberately doesn't model.
+
+### DC Fast Charging Explained: Curves, kW and the 80% Rule
+URL: https://wattway.net/guides/dc-fast-charging-explained
+
+Why EV charging slows down as the battery fills, what the kW numbers on a stall actually mean for your car, why road-trip charges stop at 80%, and how preconditioning can halve a winter charging stop.
+
+## Frequently asked questions
+
+The canonical answers live at https://wattway.net/faq. Each vehicle page carries the same questions
+answered for that specific car, and each network page for that specific network.

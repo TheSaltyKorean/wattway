@@ -9,11 +9,17 @@ import {
 } from "./types";
 import { decodePolyline } from "./googlePolyline";
 import type { LineString } from "geojson";
+// Shared with the static content pages so a published cost/time estimate always
+// matches what the planner would compute for the same car.
+import {
+  MIN_SOC,
+  CHARGE_TO_SOC,
+  CHARGE_TAPER_FACTOR,
+  ABOVE_80_TAPER_FACTOR,
+} from "./chargingMath";
 
 const ROUTES_API_URL = "https://routes.googleapis.com/directions/v2:computeRoutes";
 const OCM_BASE = "https://api.openchargemap.io/v3";
-const MIN_SOC = 0.10;
-const CHARGE_TO_SOC = 0.80;
 const MILES_TO_METERS = 1609.34;
 const DETOUR_PENALTY_PER_MILE = 0.15;
 const CORRIDOR_MILES = 10;
@@ -518,11 +524,13 @@ export function optimizeStops(
     }
 
     const departureSoC = ((arrivalKwh + kwhAdded) / fullBattery) * 100;
-    const effectiveChargekW = Math.min(bestStop.maxPowerKw, ev.maxChargekW) * 0.85;
+    const effectiveChargekW = Math.min(bestStop.maxPowerKw, ev.maxChargekW) * CHARGE_TAPER_FACTOR;
     // Charging above 80% is much slower due to taper
     const kwhBelow80 = Math.max(0, Math.min(chargeTarget, CHARGE_TO_SOC * fullBattery) - arrivalKwh);
     const kwhAbove80 = kwhAdded - kwhBelow80;
-    const chargeTimeMinutes = ((kwhBelow80 / effectiveChargekW) + (kwhAbove80 / (effectiveChargekW * 0.4))) * 60;
+    const chargeTimeMinutes =
+      ((kwhBelow80 / effectiveChargekW) +
+        (kwhAbove80 / (effectiveChargekW * ABOVE_80_TAPER_FACTOR))) * 60;
     const detourMiles = bestStop.distanceFromRouteMiles * 2;
 
     stops.push({

@@ -1,6 +1,7 @@
 "use client";
 import { useState, useCallback, useEffect, useRef } from "react";
 import dynamic from "next/dynamic";
+import Link from "next/link";
 import { EVModel, TripPlan, Waypoint } from "@/lib/types";
 import { EV_DATABASE, DEFAULT_NETWORK_PRICES, getEVById } from "@/lib/evDatabase";
 import { planTrip } from "@/lib/optimizer";
@@ -273,7 +274,17 @@ export default function Home() {
       >
           <div className="flex items-center gap-2">
             <span className="text-xl">⚡</span>
-            <h1 className="text-lg font-bold text-[var(--text)]">WattWay</h1>
+            {/* The visible mark is the brand; the appended text spells out what
+                the tool is for screen readers and for search/AI crawlers, which
+                otherwise see an <h1> containing only a made-up word. It restates
+                the subtitle directly below it, so nothing is hidden that a
+                sighted visitor can't also read. */}
+            <h1 className="text-lg font-bold text-[var(--text)]">
+              WattWay
+              <span className="sr-only">
+                {" "}— cost-optimized EV road trip charging planner
+              </span>
+            </h1>
             <div className="ml-auto flex items-center gap-1">
               {([["left", "◧", "Dock left"], ["floating", "❐", "Float (drag by header)"], ["right", "◨", "Dock right"]] as const).map(([mode, icon, label]) => (
                 <button
@@ -403,8 +414,64 @@ export default function Home() {
           )}
         </div>
 
-        {/* Footer: legal disclaimer at the bottom of the panel */}
-        <div className="px-5 pb-5 pt-1 border-t border-[var(--border)]">
+        {/* Footer: reference-content nav + legal disclaimer. The nav is also how
+            crawlers reach the static /ev, /charging-networks, /guides and /faq
+            pages — the planner itself renders nothing indexable, so without
+            these links that content would be orphaned from the home page. */}
+        <div className="px-5 pb-5 pt-4 border-t border-[var(--border)] space-y-3">
+          <nav aria-label="Reference" className="text-[11px] text-[var(--text-muted)]">
+            <p className="font-medium text-[var(--text)] mb-1.5">Charging cost reference</p>
+            <ul className="space-y-1">
+              <li>
+                <Link
+                  href="/ev"
+                  onPointerDown={(e) => e.stopPropagation()}
+                  className="underline hover:text-[var(--accent)] transition-colors"
+                >
+                  EV charging cost &amp; range database
+                </Link>{" "}
+                — every model&apos;s cost per charge
+              </li>
+              <li>
+                <Link
+                  href="/charging-networks"
+                  onPointerDown={(e) => e.stopPropagation()}
+                  className="underline hover:text-[var(--accent)] transition-colors"
+                >
+                  Charging network prices
+                </Link>{" "}
+                — what each network costs per kWh
+              </li>
+              <li>
+                <Link
+                  href="/guides/ev-road-trip-charging-cost"
+                  onPointerDown={(e) => e.stopPropagation()}
+                  className="underline hover:text-[var(--accent)] transition-colors"
+                >
+                  What an EV road trip costs
+                </Link>{" "}
+                — and how to pay less
+              </li>
+              <li>
+                <Link
+                  href="/guides/how-wattway-plans-your-trip"
+                  onPointerDown={(e) => e.stopPropagation()}
+                  className="underline hover:text-[var(--accent)] transition-colors"
+                >
+                  How WattWay picks your stops
+                </Link>
+              </li>
+              <li>
+                <Link
+                  href="/faq"
+                  onPointerDown={(e) => e.stopPropagation()}
+                  className="underline hover:text-[var(--accent)] transition-colors"
+                >
+                  FAQ
+                </Link>
+              </li>
+            </ul>
+          </nav>
           <p className="text-center text-[11px] text-[var(--text-muted)]">
             <a
               href="/legal"

@@ -11,9 +11,34 @@ export const metadata: Metadata = {
   // The site serves from the apex of wattway.net, so the OG image resolves to
   // the file at the site root (public/og-image.png -> {SITE_URL}og-image.png).
   metadataBase: new URL(SITE_URL),
-  title: "WattWay — Cost-Optimized EV Trip Planner",
+  // Child pages set their own title; this template keeps the brand on the end
+  // of every one without each page repeating it.
+  title: {
+    default: "WattWay — Cost-Optimized EV Trip Planner",
+    template: "%s | WattWay",
+  },
   description:
     "Plan your EV road trip with the cheapest possible charging stops. WattWay finds the optimal charging sequence so you spend less time and money on the road.",
+  applicationName: "WattWay",
+  authors: [{ name: "TheSaltyKorean", url: "https://thesaltykorean.com" }],
+  creator: "TheSaltyKorean",
+  publisher: "WattWay",
+  category: "travel",
+  // Opt in to the richest possible presentation in search results and AI answer
+  // surfaces: full-length text snippets, large image previews, and unlimited
+  // video preview. Without these Google caps snippet length on its own, which
+  // costs visibility on exactly the long-tail queries these pages target.
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      "max-snippet": -1,
+      "max-image-preview": "large",
+      "max-video-preview": -1,
+    },
+  },
   // Self-referencing canonical so search/AI crawlers index one URL for the home
   // page (resolves against metadataBase to https://wattway.net/).
   alternates: { canonical: "/" },
@@ -24,6 +49,7 @@ export const metadata: Metadata = {
   openGraph: {
     type: "website",
     siteName: "WattWay",
+    locale: "en_US",
     url: SITE_URL,
     title: "WattWay — Cost-Optimized EV Trip Planner",
     description: OG_DESCRIPTION,
@@ -89,22 +115,55 @@ const CSP = [
 // understand what WattWay is, that it's a free web app, and what it does. This
 // is a STATIC, developer-authored constant with no user input, so serializing
 // it into the JSON-LD script tag is not an XSS vector.
+//
+// Emitted as an @graph of three linked nodes rather than a single WebApplication:
+// the Organization is what an AI answer engine cites as the publisher, the
+// WebSite carries site-level identity, and the WebApplication describes the tool
+// itself. @id cross-references let a consumer resolve them as one entity.
+const ORG_ID = `${SITE_URL}#organization`;
+const SITE_ID = `${SITE_URL}#website`;
+
 const STRUCTURED_DATA = {
   "@context": "https://schema.org",
-  "@type": ["WebApplication", "SoftwareApplication"],
-  name: "WattWay",
-  url: SITE_URL,
-  description: OG_DESCRIPTION,
-  applicationCategory: "TravelApplication",
-  operatingSystem: "Any (web browser)",
-  browserRequirements: "Requires JavaScript.",
-  isAccessibleForFree: true,
-  offers: { "@type": "Offer", price: "0", priceCurrency: "USD" },
-  featureList: [
-    "Cost-optimized EV charging stops along a road-trip route",
-    "Live charging-network pricing and membership-aware cost estimates",
-    "~170 EV profiles plus custom vehicle battery/range/charge specs",
-    "Charger power and reliability factored into stop selection",
+  "@graph": [
+    {
+      "@type": "Organization",
+      "@id": ORG_ID,
+      name: "WattWay",
+      url: SITE_URL,
+      description: OG_DESCRIPTION,
+      logo: `${SITE_URL}icon-512.png`,
+      founder: { "@type": "Person", name: "TheSaltyKorean", url: "https://thesaltykorean.com" },
+    },
+    {
+      "@type": "WebSite",
+      "@id": SITE_ID,
+      name: "WattWay",
+      url: SITE_URL,
+      description: OG_DESCRIPTION,
+      publisher: { "@id": ORG_ID },
+      inLanguage: "en-US",
+    },
+    {
+      "@type": ["WebApplication", "SoftwareApplication"],
+      "@id": `${SITE_URL}#webapp`,
+      name: "WattWay",
+      url: SITE_URL,
+      description: OG_DESCRIPTION,
+      applicationCategory: "TravelApplication",
+      operatingSystem: "Any (web browser)",
+      browserRequirements: "Requires JavaScript.",
+      isAccessibleForFree: true,
+      publisher: { "@id": ORG_ID },
+      isPartOf: { "@id": SITE_ID },
+      offers: { "@type": "Offer", price: "0", priceCurrency: "USD" },
+      featureList: [
+        "Cost-optimized EV charging stops along a road-trip route",
+        "Live charging-network pricing and membership-aware cost estimates",
+        "~170 EV profiles plus custom vehicle battery/range/charge specs",
+        "Charger power and reliability factored into stop selection",
+      ],
+    },
   ],
 };
 

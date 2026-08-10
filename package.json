@@ -6,7 +6,9 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "generate:llms": "tsx scripts/generate-llms.mjs",
+    "check:llms": "tsx scripts/generate-llms.mjs && git diff --exit-code -- public/llms.txt public/llms-full.txt"
   },
   "dependencies": {
     "@googlemaps/js-api-loader": "^2.1.1",
@@ -24,6 +26,7 @@
     "eslint-config-next": "^15.5.18",
     "postcss": "^8.5.10",
     "tailwindcss": "^3.4.1",
+    "tsx": "^4.23.12",
     "typescript": "^5"
   },
   "overrides": {

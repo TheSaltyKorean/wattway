@@ -9,6 +9,15 @@
 # most specific group that matches its user-agent and ignores `User-agent: *`
 # entirely, so a named agent whose group omitted this line would still crawl
 # /api/ no matter what the wildcard group said.
+#
+# NOTE: this file is not necessarily what a crawler receives. Cloudflare's
+# "managed robots.txt" feature, when enabled on the zone, PREPENDS its own block
+# that sends `Disallow: /` to GPTBot, ClaudeBot, CCBot, Google-Extended,
+# Applebot-Extended, Amazonbot, Bytespider and meta-externalagent, along with a
+# `Content-Signal: ai-train=no`. That is the exact opposite of the intent below.
+# If AI crawlers are being turned away, check the Cloudflare dashboard
+# (AI Crawl Control / robots.txt) before editing this file — the origin cannot
+# override an edge-injected block from here.
 
 User-agent: *
 Allow: /
@@ -53,6 +62,46 @@ Allow: /
 Disallow: /api/
 
 User-agent: CCBot
+Allow: /
+Disallow: /api/
+
+User-agent: Amazonbot
+Allow: /
+Disallow: /api/
+
+User-agent: Bytespider
+Allow: /
+Disallow: /api/
+
+User-agent: meta-externalagent
+Allow: /
+Disallow: /api/
+
+User-agent: Meta-ExternalAgent
+Allow: /
+Disallow: /api/
+
+User-agent: Applebot
+Allow: /
+Disallow: /api/
+
+User-agent: DuckAssistBot
+Allow: /
+Disallow: /api/
+
+User-agent: MistralAI-User
+Allow: /
+Disallow: /api/
+
+User-agent: cohere-ai
+Allow: /
+Disallow: /api/
+
+User-agent: YouBot
+Allow: /
+Disallow: /api/
+
+User-agent: Google-CloudVertexBot
 Allow: /
 Disallow: /api/
 
