@@ -7,7 +7,7 @@ import { siteFAQs } from "@/lib/faqs";
 const TITLE = "WattWay FAQ — EV Trip Planning Questions";
 const DESCRIPTION =
   "How WattWay picks charging stops, where its prices and charger data come from, what it costs " +
-  "(nothing), what it does with your data (nothing), and how accurate the estimates are.";
+  "(nothing), exactly what data it and its analytics collect, and how accurate the estimates are.";
 
 export const metadata: Metadata = {
   title: TITLE,

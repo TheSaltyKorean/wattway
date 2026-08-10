@@ -30,6 +30,7 @@ import {
   enRouteChargeMinutes,
   CHARGE_TO_SOC,
   MIN_SOC,
+  CHARGE_TAPER_FACTOR,
 } from "@/lib/chargingMath";
 
 // A collision would silently drop a vehicle from the static export, so fail the
@@ -302,7 +303,10 @@ export default async function EVPage({ params }: { params: Promise<{ slug: strin
         <p className="mt-2 text-sm leading-relaxed text-[var(--text-muted)]">
           Charge time is set by the slower of two things: the car&apos;s {ev.maxChargekW} kW ceiling
           and the stall&apos;s output. A {ev.maxChargekW} kW car gains nothing from a 350 kW stall
-          beyond {ev.maxChargekW} kW, and a 50 kW stall throttles every car on the lot.
+          beyond {ev.maxChargekW} kW, and a 50 kW stall throttles every car on the lot. The power
+          column is the <em>average</em> the model assumes across the whole window —{" "}
+          {Math.round(CHARGE_TAPER_FACTOR * 100)}% of whichever limit binds — not the peak either
+          side can hit, which is why the times below follow from it directly.
         </p>
         <div className="mt-4 overflow-x-auto">
           <table className="w-full text-sm border-collapse">
@@ -312,7 +316,7 @@ export default async function EVPage({ params }: { params: Promise<{ slug: strin
             <thead>
               <tr className="text-left text-xs uppercase tracking-wide text-[var(--text-muted)]">
                 <th scope="col" className="py-2 pr-4 font-medium">Stall power</th>
-                <th scope="col" className="py-2 pr-4 font-medium">Delivered to this car</th>
+                <th scope="col" className="py-2 pr-4 font-medium">Modeled average power</th>
                 <th scope="col" className="py-2 pr-4 font-medium">{windowPct} time</th>
                 <th scope="col" className="py-2 font-medium">Miles per minute</th>
               </tr>
@@ -324,7 +328,7 @@ export default async function EVPage({ params }: { params: Promise<{ slug: strin
                     {kw} kW
                   </th>
                   <td className="py-2 pr-4 text-[var(--text-muted)]">
-                    {Math.min(kw, ev.maxChargekW)} kW
+                    {(Math.min(kw, ev.maxChargekW) * CHARGE_TAPER_FACTOR).toFixed(0)} kW
                     {kw > ev.maxChargekW ? " (car-limited)" : ""}
                   </td>
                   <td className="py-2 pr-4 text-[var(--text)]">

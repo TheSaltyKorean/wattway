@@ -53,6 +53,10 @@ const A = ({ href, children }: { href: string; children: React.ReactNode }) => (
   </Link>
 );
 
+/** Wording for the sub-150 kW penalty, which is applied in two tiers. */
+const SLOW_CHARGER_PENALTY_TEXT =
+  "a penalty for stalls under 150 kW and a double penalty under 100 kW, which buy the same energy at the price of your afternoon";
+
 /** A reference mid-size EV used to make abstract numbers concrete in the prose. */
 function referenceEV() {
   const sorted = [...EV_DATABASE].sort(
@@ -321,9 +325,9 @@ function HowItWorksGuide() {
           <strong className="text-[var(--text)]">To be precise about what WattWay does:</strong> it
           is a greedy heuristic, not a global optimizer, and it narrows the field twice. At each
           step it works out how far the current charge can reach, then scores only the stations in
-          the far {Math.round((1 - CANDIDATE_WINDOW) * 100)}% of that stretch — deliberately, so it
-          stops as few times as possible — and commits to the best-scoring one without revisiting
-          it. Two consequences worth knowing: a cheap charger sitting early in the reachable stretch
+          the far {Math.round((1 - CANDIDATE_WINDOW) * 100)}% of that stretch — deliberately, to
+          push toward fewer stops, though without guaranteeing the fewest — and commits to the
+          best-scoring one without revisiting it. Two consequences worth knowing: a cheap charger sitting early in the reachable stretch
           is skipped rather than compared, and because whole stop sequences are never compared, a
           locally cheap stop that leads into an expensive stretch can still come out worse than the
           true optimum. In exchange it runs instantly in your browser and beats nearest-charger
@@ -361,12 +365,17 @@ function HowItWorksGuide() {
           <li>
             <strong className="text-[var(--text)]">Score the far candidates and commit.</strong>{" "}
             Of everything still reachable, only stations in the far{" "}
-            {Math.round((1 - CANDIDATE_WINDOW) * 100)}% of that range are scored, so the plan does
-            not stop more often than it must. Each is ranked on effective price per kWh, plus a
-            penalty per mile of detour (a charger off the highway costs range and time in both
-            directions), plus a penalty for stalls under 150 kW, which buy the same energy at the
-            price of your afternoon. The best-scoring station wins and the planner moves on — it
-            does not revisit that choice later.
+            {Math.round((1 - CANDIDATE_WINDOW) * 100)}% of that range are scored, which pushes
+            toward fewer stops without guaranteeing the fewest — within that window a cheaper or
+            more reliable earlier station can still win on score and cost you an extra stop later.
+            Each candidate is ranked on effective price per kWh, then adjusted by: a penalty per
+            mile of detour (a charger off the highway costs range and time in both directions);
+            {" "}{SLOW_CHARGER_PENALTY_TEXT}; a penalty for a single fast port, which means queue
+            and outage risk; a small penalty for a station not recently verified on Open Charge
+            Map; a penalty for arriving below 15% state of charge; a heavy penalty for an
+            operator-less &quot;Supercharger&quot; record when the car isn&apos;t Tesla-eligible;
+            and a mild preference for stations farther along the route. The best-scoring station
+            wins and the planner moves on — it does not revisit that choice later.
           </li>
           <li>
             <strong className="text-[var(--text)]">Charge to 80% — or less, or more.</strong>{" "}
@@ -601,7 +610,7 @@ export const GUIDES: Guide[] = [
         { "@type": "HowToStep", name: "Find chargers along the corridor", text: "Query charger data in segments along the route rather than from a single midpoint, so the endpoints of a long route get options too, and drop stations reported non-operational." },
         { "@type": "HowToStep", name: "Price every candidate", text: "Give each station an effective cost per kWh from its published rate or its operator's reference rate, minus discounts from memberships you hold, and remove excluded networks." },
         { "@type": "HowToStep", name: "Track state of charge along the route", text: "Advance along the route from your actual starting battery level, considering only chargers reachable with the reserve intact." },
-        { "@type": "HowToStep", name: "Score the far candidates on total cost", text: `Of the stations still reachable, keep only those in the far ${Math.round((1 - CANDIDATE_WINDOW) * 100)}% of that range so the plan stops as few times as possible, rank them on effective price per kWh plus penalties for detour distance and for stalls below 150 kW, and commit to the best without revisiting it.` },
+        { "@type": "HowToStep", name: "Score the far candidates on total cost", text: `Of the stations still reachable, keep only those in the far ${Math.round((1 - CANDIDATE_WINDOW) * 100)}% of that range, which pushes toward fewer stops without guaranteeing the fewest. Rank those candidates on effective price per kWh, adjusted by penalties for detour distance, for stalls below 150 kW (doubled below 100 kW), for a single fast port, for a station not recently verified, for arriving below 15% state of charge, and for an operator-less Supercharger record when the vehicle is not Tesla-eligible, plus a mild preference for stations farther along the route. Commit to the best without revisiting it.` },
         { "@type": "HowToStep", name: "Charge to 80 percent", text: "Top up to 80% at intermediate stops, charging higher only when the next gap requires it, because charging past 80% is disproportionately slow; the final stop takes only the energy the destination needs and usually leaves below 80%." },
         { "@type": "HowToStep", name: "Repeat to the destination", text: "Continue until the destination is reachable, producing per-stop cost, energy, charge time, detour and arrival state of charge." },
       ],

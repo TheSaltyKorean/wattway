@@ -26,8 +26,9 @@ export const GUIDE_META: GuideMeta[] = [
     title: "How WattWay Plans a Cost-Optimized EV Trip",
     description:
       "The full method: how WattWay routes a trip, finds chargers along the corridor, prices each " +
-      "one against your memberships, and picks the cheapest workable sequence of stops — plus every " +
-      "assumption it makes and what it deliberately doesn't model.",
+      "one against your memberships, and greedily picks a low-cost set of stops — plus every " +
+      "assumption it makes, the candidates it never looks at, and what it deliberately doesn't " +
+      "model.",
   },
   {
     slug: "dc-fast-charging-explained",

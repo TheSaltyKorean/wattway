@@ -4,7 +4,7 @@ import Analytics from "@/components/Analytics";
 
 const SITE_URL = "https://wattway.net/";
 const OG_DESCRIPTION =
-  "Find the cheapest realistic way to charge on any EV road trip — a minimal sequence of stops picked from live network prices, your memberships, charger power and reliability, and your car's range.";
+  "Find a cheap, realistic way to charge on any EV road trip — a short sequence of stops picked from published and per-network reference prices, your memberships, charger power and reliability, and your car's range.";
 
 export const metadata: Metadata = {
   // Absolute base for social-card crawlers, which can't resolve relative URLs.
@@ -159,7 +159,7 @@ const STRUCTURED_DATA = {
       offers: { "@type": "Offer", price: "0", priceCurrency: "USD" },
       featureList: [
         "Cost-optimized EV charging stops along a road-trip route",
-        "Live charging-network pricing and membership-aware cost estimates",
+        "Community-published and per-network reference pricing, with membership-aware cost estimates",
         "~170 EV profiles plus custom vehicle battery/range/charge specs",
         "Charger power and reliability factored into stop selection",
       ],
