@@ -147,7 +147,9 @@ export function siteFAQs(): FAQ[] {
         "incomplete. No origin, destination, waypoint, address or coordinate is ever sent. If a " +
         "planning attempt fails instead — a routing or charger-data request erroring out — a bare " +
         "`plan_trip_error` event is sent with no parameters at all, so unsuccessful attempts are " +
-        "counted too. " +
+        "counted too. GA4 also records an automatic `page_view` on every page load — the tag is " +
+        "initialised with default settings and page-view collection is not disabled — so simply " +
+        "visiting is measured whether or not you plan anything. " +
         "Those five are only what WattWay supplies, though — GA4 adds its own collection on top: " +
         "a pseudonymous client id stored in a cookie, a session id, the page URL and referrer, " +
         "your device, browser and language, and an approximate location derived from your IP " +

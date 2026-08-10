@@ -160,7 +160,7 @@ export default async function EVPage({ params }: { params: Promise<{ slug: strin
           <Link href="/" className="text-[var(--accent)] hover:underline">
             Plan a real route with this car
           </Link>{" "}
-          to see the cheapest stops along your actual highway.
+          to see which stops score best along your actual highway.
         </p>
       }
     >

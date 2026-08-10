@@ -18,7 +18,7 @@ export const metadata: Metadata = {
     template: "%s | WattWay",
   },
   description:
-    "Plan your EV road trip with the cheapest possible charging stops. WattWay finds the optimal charging sequence so you spend less time and money on the road.",
+    "Plan your EV road trip around low-cost charging stops. WattWay scores chargers along your route on price, power and reliability so you spend less time and money on the road.",
   applicationName: "WattWay",
   authors: [{ name: "TheSaltyKorean", url: "https://thesaltykorean.com" }],
   creator: "TheSaltyKorean",
@@ -58,7 +58,7 @@ export const metadata: Metadata = {
         url: "og-image.png",
         width: 1200,
         height: 630,
-        alt: "WattWay — find the cheapest way to charge on any EV road trip",
+        alt: "WattWay — a cost-optimized charging plan for any EV road trip",
       },
     ],
   },

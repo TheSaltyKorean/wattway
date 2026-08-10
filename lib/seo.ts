@@ -32,7 +32,7 @@ export const OG_IMAGE = {
   url: "og-image.png",
   width: 1200,
   height: 630,
-  alt: "WattWay — find the cheapest way to charge on any EV road trip",
+  alt: "WattWay — a cost-optimized charging plan for any EV road trip",
 };
 
 /**
