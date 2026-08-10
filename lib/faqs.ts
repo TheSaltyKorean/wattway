@@ -28,18 +28,21 @@ export function siteFAQs(): FAQ[] {
     {
       q: "What is WattWay?",
       a:
-        "A free EV road-trip planner that optimizes for total charging cost. You give it an origin, " +
-        "a destination and your car; it finds the cheapest workable sequence of charging stops " +
-        "along that route, accounting for each network's price, your memberships, charger power and " +
-        "reliability, and how far your car actually goes between stops.",
+        "A free EV road-trip planner that optimizes for charging cost. You give it an origin, a " +
+        "destination and your car; it picks a low-cost, workable set of charging stops along that " +
+        "route, accounting for each network's price, your memberships, charger power and " +
+        "reliability, and how far your car actually goes between stops. It is a heuristic rather " +
+        "than a true minimizer — see \"How does WattWay choose where to stop?\" for what that " +
+        "means in practice.",
     },
     {
       q: "How is it different from the charging planner built into my car?",
       a:
         "Built-in planners optimize for arrival time and usually favor their own network. WattWay " +
-        "optimizes for what you pay. It compares every operator along the route, applies discounts " +
-        "from memberships you actually hold, penalizes detours and slow stalls, and will happily " +
-        "route you past a closer charger to a cheaper one when the math works out.",
+        "optimizes for what you pay. It scores chargers from any operator along the route rather " +
+        "than favouring one network, applies discounts from memberships you actually hold, " +
+        "penalizes detours and slow stalls, and will happily route you past a closer charger to a " +
+        "cheaper one when the math works out.",
     },
     {
       q: "Does WattWay cost anything, or need an account?",
@@ -48,19 +51,23 @@ export function siteFAQs(): FAQ[] {
         "planner runs entirely in your browser as a static site, with no application backend that " +
         "stores anything about you. There is one server-side piece — a counter: a successful plan " +
         "sends an empty same-origin beacon to /api/plan so the operator can see how often the tool " +
-        "is used. That beacon has no body at all. Separately, if analytics is configured, Google " +
-        "Analytics records a plan event — with its own cookie-based client and session ids. See " +
-        "\"What does WattWay do with my data?\" below for exactly what each one collects.",
+        "is used. That beacon has no body at all. Separately, Cloudflare Web Analytics records " +
+        "page loads, and if analytics is configured, Google Analytics records a plan event — with " +
+        "its own cookie-based client and session ids. See \"What does WattWay do with my data?\" " +
+        "below for exactly what each one collects.",
     },
     {
       q: "How does WattWay choose where to stop?",
       a:
         "It routes your trip, pulls chargers along the corridor in segments, then walks the route " +
         "keeping track of state of charge. At each step it works out how far the current charge " +
-        `can reach and scores only the stations in the far ${farPct}% of that stretch — ` +
-        "deliberately, so it stops as few times as possible — ranking them on effective price per " +
-        "kWh after memberships, plus penalties for detour distance and for stalls under 150 kW, " +
-        "then commits to the best one without revisiting it. Intermediate stops charge to 80% by " +
+        `can reach and scores only the stations in the far ${farPct}% of that stretch — which ` +
+        "pushes toward fewer stops without guaranteeing the fewest — ranking them on effective " +
+        "price per kWh after memberships, then adjusting for detour distance, stalls under 150 kW " +
+        "(doubled under 100 kW), a single fast port, a station not recently verified on Open " +
+        "Charge Map, arriving below 15% state of charge, an operator-less \"Supercharger\" record " +
+        "when the car is not Tesla-eligible, and a mild preference for stations farther along the " +
+        "route. It then commits to the best one without revisiting it. Intermediate stops charge to 80% by " +
         "default because charging past that is disproportionately slow, going higher only when the " +
         "next gap demands it; the last stop takes only what the destination actually needs, so it " +
         "usually leaves well below 80%. Two limits follow from this: a cheap charger sitting early in the reachable " +
@@ -111,9 +118,12 @@ export function siteFAQs(): FAQ[] {
         "It has nowhere to put it. Your car, memberships, excluded networks and custom specs live in " +
         "your browser's local storage. The origin and destination you type are sent to Google and " +
         "Open Charge Map to compute the route and find chargers, because that is the only way to " +
-        "answer the question, and they are not retained by WattWay afterwards. Two things are " +
+        "answer the question, and they are not retained by WattWay afterwards. Three things are " +
         "measured. First, an empty beacon to /api/plan on each successful plan — no body, no " +
-        "content at all, just a count. Second, if analytics is configured for the deployment, a " +
+        "content at all, just a count. Second, because the site is served through Cloudflare, " +
+        "Cloudflare Web Analytics records a page-load beacon: URL, referrer, and coarse device and " +
+        "country information, without cookies and without tracking you between sites. Third, if " +
+        "analytics is configured for the deployment, a " +
         "Google Analytics 4 `plan_trip` event. WattWay attaches five fields to it: the number of " +
         "stops, the trip distance rounded to the nearest mile, how many intermediate stops you " +
         "added, the id of the vehicle profile you selected, and whether the plan came out " +

@@ -174,7 +174,10 @@ export default async function EVPage({ params }: { params: Promise<{ slug: strin
               url: `${SITE_URL}${evPath(ev)}`,
               manufacturer: { "@type": "Organization", name: ev.make },
               model: ev.model,
-              vehicleModelDate: ev.years,
+              // Schema.org types vehicleModelDate as a Date, so a range like
+              // "2021-2023" is not valid there — emit the first covered model
+              // year and carry the full range in a text property instead.
+              vehicleModelDate: ev.years.slice(0, 4),
               fuelType: "Electric",
               vehicleEngine: {
                 "@type": "EngineSpecification",
@@ -185,6 +188,7 @@ export default async function EVPage({ params }: { params: Promise<{ slug: strin
                 { "@type": "PropertyValue", name: "EPA range", value: ev.rangeMiles, unitCode: "SMI" },
                 { "@type": "PropertyValue", name: "Peak DC charging power", value: ev.maxChargekW, unitText: "kW" },
                 { "@type": "PropertyValue", name: "Efficiency", value: ev.efficiencyMilesPerKwh, unitText: "mi/kWh" },
+                { "@type": "PropertyValue", name: "Model years covered", value: ev.years },
               ],
             },
             {

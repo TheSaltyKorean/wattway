@@ -600,11 +600,13 @@ export const GUIDES: Guide[] = [
     body: <HowItWorksGuide />,
     schema: {
       "@type": "HowTo",
-      name: "How to plan a cost-optimized EV road trip",
+      name: "How WattWay plans a cost-oriented EV road trip",
       description:
-        "Plan an EV road trip that minimizes total charging cost by routing the trip, finding " +
-        "chargers along the corridor, pricing each against your memberships, and choosing stops on " +
-        "total cost rather than proximity.",
+        "Plan an EV road trip that keeps charging cost low by routing the trip, finding chargers " +
+        "along the corridor, pricing each against your memberships, and choosing stops on cost and " +
+        "practicality rather than proximity. This is a greedy heuristic, not a cost minimizer: it " +
+        "skips candidates in the near part of each reachable stretch and never compares complete " +
+        "stop sequences, so the result is a low-cost plan rather than a guaranteed cheapest one.",
       step: [
         { "@type": "HowToStep", name: "Route the trip", text: "Compute the driving route between origin, destination and any intermediate stops, honoring ferry and toll preferences." },
         { "@type": "HowToStep", name: "Find chargers along the corridor", text: "Query charger data in segments along the route rather than from a single midpoint, so the endpoints of a long route get options too, and drop stations reported non-operational." },
@@ -612,7 +614,7 @@ export const GUIDES: Guide[] = [
         { "@type": "HowToStep", name: "Track state of charge along the route", text: "Advance along the route from your actual starting battery level, considering only chargers reachable with the reserve intact." },
         { "@type": "HowToStep", name: "Score the far candidates on total cost", text: `Of the stations still reachable, keep only those in the far ${Math.round((1 - CANDIDATE_WINDOW) * 100)}% of that range, which pushes toward fewer stops without guaranteeing the fewest. Rank those candidates on effective price per kWh, adjusted by penalties for detour distance, for stalls below 150 kW (doubled below 100 kW), for a single fast port, for a station not recently verified, for arriving below 15% state of charge, and for an operator-less Supercharger record when the vehicle is not Tesla-eligible, plus a mild preference for stations farther along the route. Commit to the best without revisiting it.` },
         { "@type": "HowToStep", name: "Charge to 80 percent", text: "Top up to 80% at intermediate stops, charging higher only when the next gap requires it, because charging past 80% is disproportionately slow; the final stop takes only the energy the destination needs and usually leaves below 80%." },
-        { "@type": "HowToStep", name: "Repeat to the destination", text: "Continue until the destination is reachable, producing per-stop cost, energy, charge time, detour and arrival state of charge." },
+        { "@type": "HowToStep", name: "Repeat to the destination", text: "Continue until the destination is reachable, producing per-stop cost, energy, charge time, detour and arrival state of charge. If no reachable charger remains, or a 50-stop guard trips, the planner returns the partial sequence it has and flags the plan as incomplete rather than failing outright." },
       ],
     },
   },

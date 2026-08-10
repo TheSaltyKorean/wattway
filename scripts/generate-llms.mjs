@@ -108,7 +108,7 @@ function pageText(relativePath) {
 
 const SUMMARY =
   "WattWay is a free, cost-optimized EV road-trip charging planner. Given an origin and " +
-  "destination, it finds the cheapest workable sequence of charging stops for a specific electric " +
+  "destination, it picks a low-cost, workable set of charging stops for a specific electric " +
   "vehicle — using charging-network prices, the driver's memberships, each charger's power and " +
   "reliability, and the car's real-world range.";
 
@@ -124,7 +124,7 @@ ${CONTEXT}
 
 - **What it does**: Plans an EV road trip to minimize total charging **cost** by choosing a cheap, minimal set of charging stops along the route. Time is a secondary heuristic, not an optimized objective: the score applies flat penalties to stalls under 100 kW and under 150 kW, but never compares modeled charge duration, so two stations above 150 kW score identically on speed however differently they would actually charge.
 - **How it differs from a generic map**: It optimizes for total charging *cost* — not just "any charger nearby" — factoring in each network's pricing, the driver's membership plans, charger speed (kW), and reliability, plus the vehicle's usable battery and range.
-- **Method**: A greedy heuristic, not a global optimizer. It walks the route once and, at each step, scores only the stations in the far ${Math.round((1 - math.CANDIDATE_WINDOW) * 100)}% of what the current charge can reach (so it stops as few times as possible), then commits to the best without revisiting it. A cheap charger early in the reachable stretch is skipped rather than compared, and whole stop sequences are never compared.
+- **Method**: A greedy heuristic, not a global optimizer. It walks the route once and, at each step, scores only the stations in the far ${Math.round((1 - math.CANDIDATE_WINDOW) * 100)}% of what the current charge can reach (which pushes toward fewer stops but does not guarantee the fewest), then commits to the best without revisiting it. A cheap charger early in the reachable stretch is skipped rather than compared, and whole stop sequences are never compared.
 - **Vehicles supported**: ${EV_DATABASE.length} EV profiles across ${makes.length} makes (${makes.join(", ")}), split by spec generation, plus a custom-vehicle option for entering real-world battery/range/charge specs.
 - **Charging networks priced**: ${networks.length} (${networks.map((n) => n.name).join(", ")}), from ${seo.perKwh(networks[0].pricePerKwh)} to ${seo.perKwh(networks[networks.length - 1].pricePerKwh)} per kWh as of ${PRICING_YEAR}.
 - **Cost to use**: Free. No sign-up or account required.
@@ -171,8 +171,10 @@ const pctMax = Math.round(math.CHARGE_TO_SOC * 100);
 w(`- Planning window: charge from ${pctMin}% to ${pctMax}% state of charge; the planner goes above ${pctMax}% only when the next gap requires it.`);
 w(`- Average power below ${pctMax}%: ${Math.round(math.CHARGE_TAPER_FACTOR * 100)}% of the vehicle's nameplate peak kW, capped by the stall's output.`);
 w(`- Average power above ${pctMax}%: ${Math.round(math.ABOVE_80_TAPER_FACTOR * 100)}% of the below-${pctMax}% rate.`);
-w(`- Candidate filter: only stations in the far ${Math.round((1 - math.CANDIDATE_WINDOW) * 100)}% of the currently reachable stretch are scored; the near ${Math.round(math.CANDIDATE_WINDOW * 100)}% is skipped so the plan stops as few times as possible.`);
-w(`- Stop scoring: effective price per kWh after memberships, plus a penalty per mile of detour, plus a penalty for stalls under 150 kW. Greedy — the best candidate is committed to and not revisited.`);
+w(`- Candidate filter: only stations in the far ${Math.round((1 - math.CANDIDATE_WINDOW) * 100)}% of the currently reachable stretch are scored; the near ${Math.round(math.CANDIDATE_WINDOW * 100)}% is skipped. This pushes toward fewer stops but does not guarantee the fewest — an earlier station inside the window can still win on score and force an extra stop later.`);
+w(`- Stop scoring: effective price per kWh after memberships, then adjusted by a penalty per mile of detour; a penalty for stalls under 150 kW, doubled under 100 kW; a penalty for a single fast port; a small penalty for a station not recently verified on Open Charge Map; a penalty for arriving below 15% state of charge; a heavy penalty for an operator-less "Supercharger" record when the vehicle is not Tesla-eligible; and a mild preference for stations farther along the route. Any of these can outweigh a price difference.`);
+w(`- Commitment: greedy. The best-scoring candidate is taken and never revisited, and complete stop sequences are never compared against each other.`);
+w(`- Failure mode: if no reachable charger remains, or a 50-stop guard trips, the planner returns the partial sequence it has and flags the plan as incomplete rather than failing outright.`);
 w(`- Pricing: a station's own published rate (via Open Charge Map) wins; the per-network reference rate is only a fallback. Unrecognized operators are priced at ${seo.perKwh(seo.DEFAULT_PRICE_PER_KWH)}.`);
 w(`- Home charging is referenced at ${seo.perKwh(seo.HOME_PRICE_PER_KWH)} for the road-vs-driveway comparison.`);
 w();
