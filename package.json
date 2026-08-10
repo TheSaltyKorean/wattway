@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "postbuild": "tsx scripts/generate-llms.mjs"
+    "postbuild": "node scripts/clean-next-env.mjs && tsx scripts/generate-llms.mjs"
   },
   "dependencies": {
     "@googlemaps/js-api-loader": "^2.1.1",

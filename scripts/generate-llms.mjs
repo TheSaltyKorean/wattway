@@ -122,7 +122,7 @@ ${CONTEXT}
 
 ## Key facts
 
-- **What it does**: Plans an EV road trip to minimize total charging cost and time by choosing a minimal, cheap set of charging stops along the route.
+- **What it does**: Plans an EV road trip to minimize total charging **cost** by choosing a cheap, minimal set of charging stops along the route. Time is a secondary heuristic, not an optimized objective: the score applies flat penalties to stalls under 100 kW and under 150 kW, but never compares modeled charge duration, so two stations above 150 kW score identically on speed however differently they would actually charge.
 - **How it differs from a generic map**: It optimizes for total charging *cost* — not just "any charger nearby" — factoring in each network's pricing, the driver's membership plans, charger speed (kW), and reliability, plus the vehicle's usable battery and range.
 - **Method**: A greedy heuristic, not a global optimizer. It walks the route once and, at each step, scores only the stations in the far ${Math.round((1 - math.CANDIDATE_WINDOW) * 100)}% of what the current charge can reach (so it stops as few times as possible), then commits to the best without revisiting it. A cheap charger early in the reachable stretch is skipped rather than compared, and whole stop sequences are never compared.
 - **Vehicles supported**: ${EV_DATABASE.length} EV profiles across ${makes.length} makes (${makes.join(", ")}), split by spec generation, plus a custom-vehicle option for entering real-world battery/range/charge specs.
@@ -201,8 +201,10 @@ w("## Charging memberships");
 w();
 w(
   `WattWay models ${MEMBERSHIP_PLANS.length} subscription plans, covering ` +
-    `${MEMBERSHIP_PLANS.length} of the ${networks.length} priced networks. The rest are priced at ` +
-    `their standard rate.`
+    `${MEMBERSHIP_PLANS.length} of the ${networks.length} priced networks. No membership discount ` +
+    `is applied to the rest — which is not the same as pricing them at a flat rate, since a ` +
+    `station that publishes its own rate through Open Charge Map keeps it either way and the ` +
+    `per-network figure is only the fallback.`
 );
 w();
 for (const plan of MEMBERSHIP_PLANS) {

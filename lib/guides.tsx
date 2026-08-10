@@ -133,10 +133,12 @@ function CostGuide() {
         <P>
           <strong className="text-[var(--text)]">3. Memberships.</strong> Some networks sell a
           subscription that trades a monthly fee for a lower rate. WattWay models four of them —{" "}
-          {MEMBERSHIP_PLANS.map((m) => m.label).join(", ")} — and prices the other{" "}
-          {chargingNetworks().length - MEMBERSHIP_PLANS.length} networks at their standard rate. For
-          the four that are modeled, a single week of road-tripping usually clears the break-even;
-          for daily driving on home charging, they mostly don&apos;t pay.
+          {MEMBERSHIP_PLANS.map((m) => m.label).join(", ")} — and applies no discount to the other{" "}
+          {chargingNetworks().length - MEMBERSHIP_PLANS.length}. That is not the same as pricing
+          those at a flat rate: a station that publishes its own price through Open Charge Map keeps
+          it either way, and the per-network figure is only the fallback when it doesn&apos;t. For
+          the four plans that are modeled, a single week of road-tripping usually clears the
+          break-even; for daily driving on home charging, they mostly don&apos;t pay.
         </P>
       </section>
 
@@ -251,8 +253,8 @@ function CostGuide() {
         <P>
           <strong className="text-[var(--text)]">Look further than the next charger.</strong>{" "}
           Stopping at whatever is closest when the battery gets low is how you end up paying premium
-          rates at 8% state of charge with no alternative in reach. Scoring every charger you could
-          still reach — not just the nearest one — is the core of{" "}
+          rates at 8% state of charge with no alternative in reach. Scoring the chargers deep in
+          what you can still reach — rather than taking the first one you pass — is the core of{" "}
           <A href="/guides/how-wattway-plans-your-trip">how WattWay plans a trip</A>.
         </P>
       </section>

@@ -507,8 +507,9 @@ export default async function EVPage({ params }: { params: Promise<{ slug: strin
         <p className="mt-2 text-sm leading-relaxed text-[var(--text-muted)]">
           The tables above assume an average network on an idealized route. WattWay&apos;s planner
           uses your actual origin and destination, real charger locations and prices along that
-          highway, your memberships, and this car&apos;s exact battery and charge curve to pick the
-          cheapest workable set of stops.
+          highway, your memberships, and this car&apos;s battery, efficiency and peak charge rate to
+          pick the cheapest workable set of stops. (It approximates the charge curve from that peak
+          rate — it does not carry a measured per-vehicle curve.)
         </p>
         <Link
           href="/"
