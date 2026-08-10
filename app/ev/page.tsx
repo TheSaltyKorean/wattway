@@ -10,8 +10,9 @@ import {
   slugify,
   SITE_URL,
   usd,
+  pageSocialMetadata,
 } from "@/lib/seo";
-import { costPer100Miles, fastChargeMiles } from "@/lib/chargingMath";
+import { costPer100Miles, fastChargeMiles, fastChargeMinutes } from "@/lib/chargingMath";
 
 const TITLE = "EV Charging Cost & Range Database — Every Model";
 const DESCRIPTION =
@@ -23,7 +24,7 @@ export const metadata: Metadata = {
   title: TITLE,
   description: DESCRIPTION,
   alternates: { canonical: "/ev" },
-  openGraph: { type: "website", title: TITLE, description: DESCRIPTION, url: `${SITE_URL}/ev` },
+  ...pageSocialMetadata({ title: TITLE, description: DESCRIPTION, path: "/ev", type: "website" }),
 };
 
 export default function EVIndexPage() {
@@ -37,7 +38,14 @@ export default function EVIndexPage() {
   const cheapestPer100 = [...EV_DATABASE]
     .sort((a, b) => b.efficiencyMilesPerKwh - a.efficiencyMilesPerKwh)
     .slice(0, 5);
-  const fastest = [...EV_DATABASE].sort((a, b) => b.maxChargekW - a.maxChargekW).slice(0, 5);
+  // Ranked by modeled 10-80% time, not nameplate kW: a big pack on a 350 kW cap
+  // can take twice as long as a small one at 300 kW, so sorting on peak power
+  // would publish a "fastest charging" list that the site's own model contradicts.
+  const fastest = [...EV_DATABASE]
+    .sort(
+      (a, b) => fastChargeMinutes(a) - fastChargeMinutes(b) || a.id.localeCompare(b.id)
+    )
+    .slice(0, 5);
 
   return (
     <ContentPage
@@ -79,7 +87,7 @@ export default function EVIndexPage() {
           {[
             { heading: "Longest EPA range", evs: longestRange, stat: (ev: (typeof EV_DATABASE)[number]) => `${ev.rangeMiles} mi` },
             { heading: "Cheapest per mile", evs: cheapestPer100, stat: (ev: (typeof EV_DATABASE)[number]) => `${usd(costPer100Miles(ev, midPrice))}/100 mi` },
-            { heading: "Fastest charging", evs: fastest, stat: (ev: (typeof EV_DATABASE)[number]) => `${ev.maxChargekW} kW` },
+            { heading: "Fastest 10-80% charge", evs: fastest, stat: (ev: (typeof EV_DATABASE)[number]) => `${Math.round(fastChargeMinutes(ev))} min` },
           ].map((col) => (
             <div key={col.heading}>
               <h3 className="text-sm font-semibold text-[var(--text)]">{col.heading}</h3>

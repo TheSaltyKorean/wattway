@@ -14,12 +14,13 @@ import {
   PRICING_YEAR,
   SITE_URL,
   usd,
+  pageSocialMetadata,
 } from "@/lib/seo";
 import {
   costPer100Miles,
   fastChargeCost,
   fastChargeKwh,
-  tripEnergyCost,
+  enRouteEnergyCost,
   CHARGE_TO_SOC,
   MIN_SOC,
 } from "@/lib/chargingMath";
@@ -63,13 +64,7 @@ export async function generateMetadata({
     title,
     description,
     alternates: { canonical: networkPath(network) },
-    openGraph: {
-      type: "article",
-      title,
-      description,
-      url: `${SITE_URL}${networkPath(network)}`,
-    },
-    twitter: { card: "summary_large_image", title, description },
+    ...pageSocialMetadata({ title, description, path: networkPath(network) }),
   };
 }
 
@@ -108,8 +103,8 @@ export default async function NetworkPage({
         `Across the networks WattWay prices, rates run from ${perKwh(cheapest.pricePerKwh)} ` +
         `(${cheapest.name}) to ${perKwh(priciest.pricePerKwh)} (${priciest.name}). At ` +
         `${perKwh(network.pricePerKwh)}, ${network.name} sits ${describePosition(rank, all.length)}. ` +
-        `On a 500-mile trip that difference is worth roughly ` +
-        `${usd(Math.abs(tripEnergyCost(vehicles[3], 500, network.pricePerKwh) - tripEnergyCost(vehicles[3], 500, average)))} ` +
+        `On a 500-mile trip, the charging you buy en route differs by roughly ` +
+        `${usd(Math.abs(enRouteEnergyCost(vehicles[3], 500, network.pricePerKwh) - enRouteEnergyCost(vehicles[3], 500, average)))} ` +
         `versus an average-priced network for a mid-size EV.`,
     },
     plan

@@ -1,42 +1,107 @@
-// Generates public/llms.txt and public/llms-full.txt from the live site data.
+// Writes out/llms.txt and out/llms-full.txt. Runs as a POST-BUILD step (see the
+// "postbuild" script in package.json), because llms-full.txt is only honest if
+// it contains the actual prose of the guides and FAQ — and the single place
+// that prose exists is the JSX the build just rendered.
 //
-// llms.txt is the short index an AI answer engine reads to orient itself;
-// llms-full.txt is the whole corpus as plain text, so an agent can ingest every
-// price, spec and answer in one fetch instead of crawling 200 HTML pages (and
-// without needing to execute the JavaScript the planner itself is built on).
+// So: the tabular data (vehicles, networks, memberships) comes from the app's
+// own TypeScript modules, and the long-form text is extracted from the built
+// HTML in out/. Nothing is transcribed by hand, so nothing can drift.
 //
-// Run via `npm run generate:llms` (which uses tsx, since this imports the app's
-// TypeScript modules directly so the numbers can never diverge from the ones the
-// pages render). Regenerate whenever the vehicle database, network prices or
-// guide content change; `npm run check:llms` regenerates and fails if the
-// committed files have drifted from the data.
-import { writeFileSync } from "node:fs";
+// Failing here fails the build on purpose. A silently missing llms.txt is worse
+// than a broken deploy, because nobody would notice for months.
+import { writeFileSync, readFileSync, existsSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const root = join(here, "..");
+const outDir = join(root, "out");
+
+if (!existsSync(outDir)) {
+  throw new Error(
+    `No build output at ${outDir}. Run this after \`next build\` (it is wired up as "postbuild").`
+  );
+}
 
 const { EV_DATABASE } = await import("../lib/evDatabase.ts");
 const seo = await import("../lib/seo.ts");
 const math = await import("../lib/chargingMath.ts");
 const { MEMBERSHIP_PLANS } = await import("../lib/memberships.ts");
-// guideMeta, not guides.tsx: the latter builds React elements at module scope.
-const { GUIDE_META: GUIDES } = await import("../lib/guideMeta.ts");
+const { GUIDE_META } = await import("../lib/guideMeta.ts");
+const { siteFAQs } = await import("../lib/faqs.ts");
 
 const { SITE_URL, chargingNetworks, evName, evPath, networkPath, PRICING_YEAR } = seo;
 const networks = chargingNetworks();
 const makes = [...new Set(EV_DATABASE.map((e) => e.make))].sort();
+const faqs = siteFAQs();
+
+// --- HTML -> text -----------------------------------------------------------
+
+const ENTITIES = {
+  amp: "&", lt: "<", gt: ">", quot: '"', apos: "'", nbsp: " ",
+  "#39": "'", "#x27": "'", "#x2F": "/", mdash: "—", ndash: "–", hellip: "…",
+};
+
+function decodeEntities(text) {
+  return text.replace(/&(#x?[0-9a-fA-F]+|[a-zA-Z]+);/g, (whole, name) => {
+    if (ENTITIES[name] !== undefined) return ENTITIES[name];
+    if (name[0] === "#") {
+      const code = name[1] === "x" || name[1] === "X"
+        ? parseInt(name.slice(2), 16)
+        : parseInt(name.slice(1), 10);
+      return Number.isFinite(code) ? String.fromCodePoint(code) : whole;
+    }
+    return whole;
+  });
+}
+
+/**
+ * Extract the readable prose from a built page: everything inside <main>, minus
+ * the nav/breadcrumb/footer chrome, with headings and list items kept on their
+ * own lines so the result reads as a document rather than one long paragraph.
+ */
+function pageText(relativePath) {
+  const file = join(outDir, relativePath);
+  if (!existsSync(file)) throw new Error(`Expected built page missing: ${file}`);
+  let html = readFileSync(file, "utf8");
+
+  html = html.replace(/<script[\s\S]*?<\/script>/g, "");
+  html = html.replace(/<style[\s\S]*?<\/style>/g, "");
+
+  const main = html.match(/<main[^>]*>([\s\S]*)<\/main>/);
+  if (!main) throw new Error(`No <main> found in ${file}`);
+  let body = main[1];
+
+  // Drop the breadcrumb trail — it is navigation, not content.
+  body = body.replace(/<nav[^>]*aria-label="Breadcrumb"[\s\S]*?<\/nav>/g, "");
+  // Screen-reader-only table captions duplicate the visible heading.
+  body = body.replace(/<caption[^>]*class="[^"]*sr-only[^"]*"[^>]*>[\s\S]*?<\/caption>/g, "");
+
+  // Structure -> line breaks, so headings and rows don't run together.
+  body = body.replace(/<\/(h[1-6]|p|li|dt|dd|tr|section|div|ol|ul|dl|table)>/g, "\n");
+  body = body.replace(/<(h[1-6])[^>]*>/g, "\n## ");
+  body = body.replace(/<\/(td|th)>/g, " | ");
+  body = body.replace(/<li[^>]*>/g, "- ");
+
+  const text = decodeEntities(body.replace(/<[^>]+>/g, ""));
+
+  return text
+    .split("\n")
+    .map((line) => line.replace(/[ \t ]+/g, " ").replace(/ \| $/, "").trim())
+    .filter(Boolean)
+    .join("\n")
+    .replace(/\n{3,}/g, "\n\n");
+}
+
+// --- llms.txt ---------------------------------------------------------------
 
 const SUMMARY =
   "WattWay is a free, cost-optimized EV road-trip charging planner. Given an origin and " +
-  "destination, it finds the cheapest realistic sequence of charging stops for a specific electric " +
+  "destination, it finds the cheapest workable sequence of charging stops for a specific electric " +
   "vehicle — using charging-network prices, the driver's memberships, each charger's power and " +
   "reliability, and the car's real-world range.";
 
 const CONTEXT = `WattWay runs entirely in the browser as a static site: there is no account, no login, and no server that stores user data. Routing, geocoding, and place search come from the Google Maps Platform; charger locations, connector types, power levels, and pricing come from Open Charge Map (a community-edited database). Every number WattWay shows — cost, range, energy used, charge time, number and location of stops, arrival state of charge — is a model-based estimate, not a quote or a measurement. See the legal disclaimer for the full data and accuracy notice.`;
-
-// --- llms.txt ---------------------------------------------------------------
 
 const llms = `# WattWay
 
@@ -46,8 +111,9 @@ ${CONTEXT}
 
 ## Key facts
 
-- **What it does**: Plans an EV road trip to minimize total charging cost and time by choosing an optimal, minimal set of charging stops along the route.
+- **What it does**: Plans an EV road trip to minimize total charging cost and time by choosing a minimal, cheap set of charging stops along the route.
 - **How it differs from a generic map**: It optimizes for total charging *cost* — not just "any charger nearby" — factoring in each network's pricing, the driver's membership plans, charger speed (kW), and reliability, plus the vehicle's usable battery and range.
+- **Method**: A greedy heuristic, not a global optimizer. It walks the route once and, at each step, commits to the best-scoring charger still reachable. It does not compare whole stop sequences.
 - **Vehicles supported**: ${EV_DATABASE.length} EV profiles across ${makes.length} makes (${makes.join(", ")}), split by spec generation, plus a custom-vehicle option for entering real-world battery/range/charge specs.
 - **Charging networks priced**: ${networks.length} (${networks.map((n) => n.name).join(", ")}), from ${seo.perKwh(networks[0].pricePerKwh)} to ${seo.perKwh(networks[networks.length - 1].pricePerKwh)} per kWh as of ${PRICING_YEAR}.
 - **Cost to use**: Free. No sign-up or account required.
@@ -60,19 +126,18 @@ ${CONTEXT}
 - [EV charging cost & range database](${SITE_URL}/ev): Charging cost, range, battery size and DC fast-charge rate for all ${EV_DATABASE.length} supported vehicles, each with its own page.
 - [Charging network prices compared](${SITE_URL}/charging-networks): Per-kWh rates for all ${networks.length} priced networks, membership break-evens, and why the cheapest network is often the wrong stop.
 - [Guides](${SITE_URL}/guides): Long-form explanations of road-trip charging cost, the planning algorithm, and DC fast-charging behavior.
-${GUIDES.map((g) => `  - [${g.title}](${SITE_URL}/guides/${g.slug}): ${g.description}`).join("\n")}
+${GUIDE_META.map((g) => `  - [${g.title}](${SITE_URL}/guides/${g.slug}): ${g.description}`).join("\n")}
 - [FAQ](${SITE_URL}/faq): How WattWay picks stops, where its data comes from, what it costs, and how accurate it is.
 - [Legal disclaimer & terms](${SITE_URL}/legal): Estimates-only notice, third-party data sources (Google Maps Platform, Open Charge Map), privacy notice, and terms of use.
 
 ## Optional
 
-- [Full text corpus](${SITE_URL}/llms-full.txt): Every vehicle spec, network price and answer on the site as plain text, in one file.
+- [Full text corpus](${SITE_URL}/llms-full.txt): Every vehicle spec, network price, guide and FAQ answer as plain text, in one file.
 `;
 
 // --- llms-full.txt ----------------------------------------------------------
 
 const REFERENCE_RATE = networks[Math.floor(networks.length / 2)].pricePerKwh;
-
 const lines = [];
 const w = (s = "") => lines.push(s);
 
@@ -90,11 +155,14 @@ w();
 
 w("## Charging model");
 w();
-w(`- Planning window: charge from ${Math.round(math.MIN_SOC * 100)}% to ${Math.round(math.CHARGE_TO_SOC * 100)}% state of charge; the planner goes above ${Math.round(math.CHARGE_TO_SOC * 100)}% only when the next gap requires it.`);
-w(`- Average power below ${Math.round(math.CHARGE_TO_SOC * 100)}%: ${Math.round(math.CHARGE_TAPER_FACTOR * 100)}% of the vehicle's nameplate peak kW, capped by the stall's output.`);
-w(`- Average power above ${Math.round(math.CHARGE_TO_SOC * 100)}%: ${Math.round(math.ABOVE_80_TAPER_FACTOR * 100)}% of the below-${Math.round(math.CHARGE_TO_SOC * 100)}% rate.`);
-w(`- Stop scoring: effective price per kWh after memberships, plus a penalty per mile of detour, plus a penalty for stalls under 150 kW.`);
+const pctMin = Math.round(math.MIN_SOC * 100);
+const pctMax = Math.round(math.CHARGE_TO_SOC * 100);
+w(`- Planning window: charge from ${pctMin}% to ${pctMax}% state of charge; the planner goes above ${pctMax}% only when the next gap requires it.`);
+w(`- Average power below ${pctMax}%: ${Math.round(math.CHARGE_TAPER_FACTOR * 100)}% of the vehicle's nameplate peak kW, capped by the stall's output.`);
+w(`- Average power above ${pctMax}%: ${Math.round(math.ABOVE_80_TAPER_FACTOR * 100)}% of the below-${pctMax}% rate.`);
+w(`- Stop scoring: effective price per kWh after memberships, plus a penalty per mile of detour, plus a penalty for stalls under 150 kW. Greedy — the best reachable candidate is committed to and not revisited.`);
 w(`- Unrecognized operators are priced at ${seo.perKwh(seo.DEFAULT_PRICE_PER_KWH)}.`);
+w(`- Home charging is referenced at ${seo.perKwh(seo.HOME_PRICE_PER_KWH)} for the road-vs-driveway comparison.`);
 w();
 
 w("## Charging networks");
@@ -103,10 +171,10 @@ w("| Network | $/kWh | Type | Membership |");
 w("| --- | --- | --- | --- |");
 for (const n of networks) {
   const plan = seo.membershipForNetwork(n.name);
-  const m = plan
-    ? `${plan.label}, ${seo.usd(plan.monthlyFeeUsd)}/mo, -${seo.perKwh(plan.discountPerKwh)}`
-    : "none";
-  w(`| ${n.name} | ${n.pricePerKwh.toFixed(2)} | ${n.kind} | ${m} |`);
+  w(
+    `| ${n.name} | ${n.pricePerKwh.toFixed(2)} | ${n.kind} | ` +
+      `${plan ? `${plan.label}, ${seo.usd(plan.monthlyFeeUsd)}/mo, -${seo.perKwh(plan.discountPerKwh)}` : "none"} |`
+  );
 }
 w();
 for (const n of networks) {
@@ -118,6 +186,12 @@ for (const n of networks) {
 }
 
 w("## Charging memberships");
+w();
+w(
+  `WattWay models ${MEMBERSHIP_PLANS.length} subscription plans, covering ` +
+    `${MEMBERSHIP_PLANS.length} of the ${networks.length} priced networks. The rest are priced at ` +
+    `their standard rate.`
+);
 w();
 for (const plan of MEMBERSHIP_PLANS) {
   w(
@@ -133,15 +207,15 @@ w();
 w(
   `${EV_DATABASE.length} profiles across ${makes.length} makes, split by spec generation. ` +
     `Columns: usable battery (kWh), EPA range (mi), peak DC charge rate (kW), efficiency (mi/kWh), ` +
-    `energy moved in a ${Math.round(math.MIN_SOC * 100)}-${Math.round(math.CHARGE_TO_SOC * 100)}% ` +
-    `charge (kWh), miles added by that charge, best-case charge time (min), and cost per 100 miles ` +
-    `at a mid-pack ${seo.perKwh(REFERENCE_RATE)}.`
+    `energy moved in a ${pctMin}-${pctMax}% charge (kWh), miles added by that charge, best-case ` +
+    `charge time (min), and cost per 100 miles at a mid-pack ${seo.perKwh(REFERENCE_RATE)}.`
 );
 w();
 w("| Vehicle | Years | kWh | Range | Peak kW | mi/kWh | Charge kWh | Charge mi | Charge min | $/100mi | URL |");
 w("| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |");
 for (const ev of [...EV_DATABASE].sort(
-  (a, b) => a.make.localeCompare(b.make) || a.model.localeCompare(b.model) || a.years.localeCompare(b.years)
+  (a, b) =>
+    a.make.localeCompare(b.make) || a.model.localeCompare(b.model) || a.years.localeCompare(b.years)
 )) {
   w(
     `| ${ev.make} ${ev.model} | ${ev.years} | ${ev.batteryKwh} | ${ev.rangeMiles} | ${ev.maxChargekW} | ` +
@@ -152,26 +226,35 @@ for (const ev of [...EV_DATABASE].sort(
 }
 w();
 
-w("## Guides");
+w("## Frequently asked questions");
 w();
-for (const g of GUIDES) {
-  w(`### ${g.title}`);
-  w(`URL: ${SITE_URL}/guides/${g.slug}`);
+w(`Source: ${SITE_URL}/faq`);
+w();
+for (const faq of faqs) {
+  w(`### ${faq.q}`);
   w();
-  w(g.description);
+  w(faq.a);
   w();
 }
 
-w("## Frequently asked questions");
+w("## Guides");
 w();
-w(`The canonical answers live at ${SITE_URL}/faq. Each vehicle page carries the same questions`);
-w("answered for that specific car, and each network page for that specific network.");
-w();
+for (const guide of GUIDE_META) {
+  w(`### ${guide.title}`);
+  w(`URL: ${SITE_URL}/guides/${guide.slug}`);
+  w();
+  w(guide.description);
+  w();
+  // Full prose, lifted from the page the build just rendered.
+  w(pageText(join("guides", `${guide.slug}.html`)));
+  w();
+}
 
-writeFileSync(join(root, "public/llms.txt"), llms, "utf8");
-writeFileSync(join(root, "public/llms-full.txt"), lines.join("\n"), "utf8");
+const full = lines.join("\n");
+writeFileSync(join(outDir, "llms.txt"), llms, "utf8");
+writeFileSync(join(outDir, "llms-full.txt"), full, "utf8");
 
 console.log(
-  `llms.txt: ${llms.length} bytes · llms-full.txt: ${lines.join("\n").length} bytes ` +
-    `(${EV_DATABASE.length} vehicles, ${networks.length} networks, ${GUIDES.length} guides)`
+  `llms.txt: ${llms.length} bytes · llms-full.txt: ${full.length} bytes ` +
+    `(${EV_DATABASE.length} vehicles, ${networks.length} networks, ${GUIDE_META.length} guides, ${faqs.length} FAQs)`
 );

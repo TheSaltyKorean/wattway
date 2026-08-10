@@ -17,6 +17,7 @@ import {
   SITE_URL,
   duration,
   usd,
+  pageSocialMetadata,
 } from "@/lib/seo";
 import {
   costPer100Miles,
@@ -25,7 +26,7 @@ import {
   fastChargeMiles,
   fastChargeMinutes,
   stopsForTrip,
-  tripEnergyCost,
+  enRouteEnergyCost,
   CHARGE_TO_SOC,
   MIN_SOC,
 } from "@/lib/chargingMath";
@@ -76,13 +77,7 @@ export async function generateMetadata({
     title,
     description,
     alternates: { canonical: evPath(ev) },
-    openGraph: {
-      type: "article",
-      title,
-      description,
-      url: `${SITE_URL}${evPath(ev)}`,
-    },
-    twitter: { card: "summary_large_image", title, description },
+    ...pageSocialMetadata({ title, description, path: evPath(ev) }),
   };
 }
 
@@ -140,8 +135,11 @@ export default async function EVPage({ params }: { params: Promise<{ slug: strin
       a:
         `About ${stopsForTrip(ev, 500)} DC fast-charge stops, assuming you leave at ` +
         `${Math.round(CHARGE_TO_SOC * 100)}% and arrive on the ${Math.round(MIN_SOC * 100)}% reserve. ` +
-        `The energy for that trip costs roughly ${usd(tripEnergyCost(ev, 500, cheapest.pricePerKwh))} ` +
-        `on ${cheapest.name} and ${usd(tripEnergyCost(ev, 500, priciest.pricePerKwh))} on ${priciest.name}.`,
+        `The charging you buy on the way costs roughly ` +
+        `${usd(enRouteEnergyCost(ev, 500, cheapest.pricePerKwh))} on ${cheapest.name} and ` +
+        `${usd(enRouteEnergyCost(ev, 500, priciest.pricePerKwh))} on ${priciest.name}. That excludes ` +
+        `the first ${Math.round(fastChargeMiles(ev))} miles, which come out of the charge you left ` +
+        `home with at a residential rate.`,
     },
   ];
 
@@ -287,8 +285,8 @@ export default async function EVPage({ params }: { params: Promise<{ slug: strin
           for identical electricity. Over the {stopsForTrip(ev, 1000)} stops a 1,000-mile trip
           needs, picking well is worth about{" "}
           {usd(
-            tripEnergyCost(ev, 1000, priciest.pricePerKwh) -
-              tripEnergyCost(ev, 1000, cheapest.pricePerKwh)
+            enRouteEnergyCost(ev, 1000, priciest.pricePerKwh) -
+              enRouteEnergyCost(ev, 1000, cheapest.pricePerKwh)
           )}
           . Municipal and utility-run networks are cheapest but exist only in a few metros, so a
           realistic plan mixes them with whatever is actually on your route.
@@ -366,7 +364,7 @@ export default async function EVPage({ params }: { params: Promise<{ slug: strin
                 <th scope="col" className="py-2 pr-4 font-medium">Trip</th>
                 <th scope="col" className="py-2 pr-4 font-medium">Charging stops</th>
                 <th scope="col" className="py-2 pr-4 font-medium">Time charging (best case)</th>
-                <th scope="col" className="py-2 font-medium">Energy cost</th>
+                <th scope="col" className="py-2 font-medium">Charging bought en route</th>
               </tr>
             </thead>
             <tbody>
@@ -382,8 +380,8 @@ export default async function EVPage({ params }: { params: Promise<{ slug: strin
                       {duration(stops * chargeMinutes)}
                     </td>
                     <td className="py-2 text-[var(--text)]">
-                      {usd(tripEnergyCost(ev, distance, cheapest.pricePerKwh))} –{" "}
-                      {usd(tripEnergyCost(ev, distance, priciest.pricePerKwh))}
+                      {usd(enRouteEnergyCost(ev, distance, cheapest.pricePerKwh))} –{" "}
+                      {usd(enRouteEnergyCost(ev, distance, priciest.pricePerKwh))}
                     </td>
                   </tr>
                 );
@@ -392,7 +390,10 @@ export default async function EVPage({ params }: { params: Promise<{ slug: strin
           </table>
         </div>
         <p className="mt-4 text-sm leading-relaxed text-[var(--text-muted)]">
-          This is the idealized version — evenly spaced chargers, every one working, no detours. A
+          The cost column is what you buy <em>at chargers</em>: the first{" "}
+          {Math.round(milesPerCharge)} miles run on the charge you left home with, so a trip shorter
+          than that shows nothing bought en route. This is also the idealized version — evenly
+          spaced chargers, every one working, no detours. A
           real route has gaps, and the charger 40 miles ahead may be cheaper than the one you can
           just barely reach.{" "}
           <Link href="/" className="text-[var(--accent)] hover:underline">

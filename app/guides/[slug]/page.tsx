@@ -3,7 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import ContentPage, { JsonLd } from "@/components/ContentPage";
 import { GUIDES, getGuideBySlug } from "@/lib/guides";
-import { SITE_URL } from "@/lib/seo";
+import { SITE_URL, pageSocialMetadata } from "@/lib/seo";
 
 export const dynamicParams = false;
 
@@ -24,13 +24,11 @@ export async function generateMetadata({
     title: guide.title,
     description: guide.description,
     alternates: { canonical: `/guides/${guide.slug}` },
-    openGraph: {
-      type: "article",
+    ...pageSocialMetadata({
       title: guide.title,
       description: guide.description,
-      url: `${SITE_URL}/guides/${guide.slug}`,
-    },
-    twitter: { card: "summary_large_image", title: guide.title, description: guide.description },
+      path: `/guides/${guide.slug}`,
+    }),
   };
 }
 

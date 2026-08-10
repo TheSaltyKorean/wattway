@@ -2,7 +2,8 @@ import Link from "next/link";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Legal Disclaimer — WattWay",
+  // No brand suffix here: the root layout's title template appends "| WattWay".
+  title: "Legal Disclaimer & Terms of Use",
   description: "Legal disclaimer, terms of use, and data notice for WattWay.",
   alternates: { canonical: "/legal" },
 };

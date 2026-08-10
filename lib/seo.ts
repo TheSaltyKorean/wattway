@@ -20,6 +20,60 @@ export const PRICING_YEAR = 2026;
  */
 export const CONTENT_LAST_MODIFIED = "2026-08-10";
 
+/**
+ * Rough US residential electricity rate, used wherever a page contrasts home
+ * charging with DC fast charging or prices the charge you left the driveway
+ * with. Shared so the comparison is the same number everywhere it appears.
+ */
+export const HOME_PRICE_PER_KWH = 0.17;
+
+/** Shared social-card image. Relative — resolves against metadataBase. */
+export const OG_IMAGE = {
+  url: "og-image.png",
+  width: 1200,
+  height: 630,
+  alt: "WattWay — find the cheapest way to charge on any EV road trip",
+};
+
+/**
+ * Open Graph + Twitter metadata for a content page.
+ *
+ * Next replaces the parent `openGraph` object wholesale rather than deep-merging
+ * it, so a page that declares its own must restate everything it wants to keep —
+ * most importantly `images`, without which the page loses its social preview.
+ * Building it here means no page can forget.
+ */
+export function pageSocialMetadata({
+  title,
+  description,
+  path,
+  type = "article",
+}: {
+  title: string;
+  description: string;
+  /** Site-root-relative, e.g. "/ev/tesla-model-y-lr-awd-2024". */
+  path: string;
+  type?: "website" | "article";
+}) {
+  return {
+    openGraph: {
+      type,
+      siteName: SITE_NAME,
+      locale: "en_US",
+      title,
+      description,
+      url: `${SITE_URL}${path}`,
+      images: [OG_IMAGE],
+    },
+    twitter: {
+      card: "summary_large_image" as const,
+      title,
+      description,
+      images: [OG_IMAGE.url],
+    },
+  };
+}
+
 /** Lowercase, hyphenated, URL-safe. Stable across builds for a given input. */
 export function slugify(value: string): string {
   return value

@@ -10,6 +10,7 @@ import {
   PRICING_YEAR,
   SITE_URL,
   usd,
+  pageSocialMetadata,
 } from "@/lib/seo";
 import { MEMBERSHIP_PLANS } from "@/lib/memberships";
 
@@ -23,12 +24,7 @@ export const metadata: Metadata = {
   title: TITLE,
   description: DESCRIPTION,
   alternates: { canonical: "/charging-networks" },
-  openGraph: {
-    type: "website",
-    title: TITLE,
-    description: DESCRIPTION,
-    url: `${SITE_URL}/charging-networks`,
-  },
+  ...pageSocialMetadata({ title: TITLE, description: DESCRIPTION, path: "/charging-networks", type: "website" }),
 };
 
 const KIND_LABEL: Record<string, string> = {

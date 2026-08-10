@@ -1,14 +1,24 @@
 import Link from "next/link";
 import { GUIDE_META, type GuideMeta } from "./guideMeta";
+import { MEMBERSHIP_PLANS } from "./memberships";
 import { EV_DATABASE } from "./evDatabase";
-import { chargingNetworks, evName, evPath, perKwh, PRICING_YEAR, usd } from "./seo";
+import {
+  chargingNetworks,
+  evName,
+  evPath,
+  HOME_PRICE_PER_KWH,
+  perKwh,
+  PRICING_YEAR,
+  usd,
+} from "./seo";
 import {
   costPer100Miles,
   fastChargeKwh,
   fastChargeMiles,
   fastChargeMinutes,
   stopsForTrip,
-  tripEnergyCost,
+  enRouteEnergyCost,
+  energyCostForMiles,
 } from "./chargingMath";
 
 export interface Guide extends GuideMeta {
@@ -59,9 +69,8 @@ function CostGuide() {
     commercial.reduce((sum, n) => sum + n.pricePerKwh, 0) / commercial.length;
   const ev = referenceEV();
 
-  // Home charging at the rough US residential average, for the contrast that
-  // surprises most new EV owners on their first road trip.
-  const HOME_RATE = 0.17;
+  // Shared with the rest of the site so the home-vs-road contrast is one number.
+  const HOME_RATE = HOME_PRICE_PER_KWH;
 
   return (
     <>
@@ -74,9 +83,10 @@ function CostGuide() {
           </strong>{" "}
           for a mid-size EV — call it {usd(costPer100Miles(ev, cheapest.pricePerKwh))} if you can
           stick to the cheapest networks and {usd(costPer100Miles(ev, priciest.pricePerKwh))} if you
-          stop wherever is convenient. A {ev.batteryKwh} kWh car covering 500 miles spends about{" "}
-          {usd(tripEnergyCost(ev, 500, avgCommercial))} on electricity across{" "}
-          {stopsForTrip(ev, 500)} stops.
+          stop wherever is convenient. A {ev.batteryKwh} kWh car covering 500 miles burns about{" "}
+          {usd(energyCostForMiles(ev, 500, avgCommercial))} of electricity at that rate, across{" "}
+          {stopsForTrip(ev, 500)} charging stops — less in practice, because the first{" "}
+          {Math.round(fastChargeMiles(ev))} miles run on the cheap charge you left home with.
         </P>
         <P>
           The number that catches people out is the comparison with home. At a typical{" "}
@@ -103,8 +113,8 @@ function CostGuide() {
           electricity. Over the {stopsForTrip(ev, 1000)} stops a 1,000-mile trip needs, choosing
           well is worth about{" "}
           {usd(
-            tripEnergyCost(ev, 1000, priciest.pricePerKwh) -
-              tripEnergyCost(ev, 1000, cheapest.pricePerKwh)
+            enRouteEnergyCost(ev, 1000, priciest.pricePerKwh) -
+              enRouteEnergyCost(ev, 1000, cheapest.pricePerKwh)
           )}
           . See the full{" "}
           <A href="/charging-networks">network price comparison</A>.
@@ -120,10 +130,12 @@ function CostGuide() {
           than a 2× difference in fuel cost between the extremes.
         </P>
         <P>
-          <strong className="text-[var(--text)]">3. Memberships.</strong> Every major network sells
-          a subscription that trades a monthly fee for a lower rate. On a road trip they nearly
-          always pay: a single week of driving clears the break-even on all of them. For daily
-          driving on home charging, most don&apos;t.
+          <strong className="text-[var(--text)]">3. Memberships.</strong> Some networks sell a
+          subscription that trades a monthly fee for a lower rate. WattWay models four of them —{" "}
+          {MEMBERSHIP_PLANS.map((m) => m.label).join(", ")} — and prices the other{" "}
+          {chargingNetworks().length - MEMBERSHIP_PLANS.length} networks at their standard rate. For
+          the four that are modeled, a single week of road-tripping usually clears the break-even;
+          for daily driving on home charging, they mostly don&apos;t pay.
         </P>
       </section>
 
@@ -141,7 +153,7 @@ function CostGuide() {
                 <th scope="col" className="py-2 pr-4 font-medium">Network</th>
                 <th scope="col" className="py-2 pr-4 font-medium">Rate</th>
                 <th scope="col" className="py-2 pr-4 font-medium">Per 100 mi</th>
-                <th scope="col" className="py-2 font-medium">500-mile trip</th>
+                <th scope="col" className="py-2 font-medium">500 mi, all at this rate</th>
               </tr>
             </thead>
             <tbody>
@@ -154,7 +166,7 @@ function CostGuide() {
                   {usd(costPer100Miles(ev, HOME_RATE))}
                 </td>
                 <td className="py-2 text-[var(--text-muted)]">
-                  {usd(tripEnergyCost(ev, 500, HOME_RATE))}
+                  {usd(energyCostForMiles(ev, 500, HOME_RATE))}
                 </td>
               </tr>
               {networks.map((n) => (
@@ -167,7 +179,7 @@ function CostGuide() {
                     {usd(costPer100Miles(ev, n.pricePerKwh))}
                   </td>
                   <td className="py-2 text-[var(--text-muted)]">
-                    {usd(tripEnergyCost(ev, 500, n.pricePerKwh))}
+                    {usd(energyCostForMiles(ev, 500, n.pricePerKwh))}
                   </td>
                 </tr>
               ))}
@@ -236,10 +248,10 @@ function CostGuide() {
           that is both money and, frequently, an entire extra charging stop.
         </P>
         <P>
-          <strong className="text-[var(--text)]">Plan the whole route, not the next stop.</strong>{" "}
-          Greedy stop-by-stop decisions are how you end up paying premium rates at 8% state of
-          charge with no alternative in reach. Deciding all the stops together is the entire premise
-          of{" "}
+          <strong className="text-[var(--text)]">Look further than the next charger.</strong>{" "}
+          Stopping at whatever is closest when the battery gets low is how you end up paying premium
+          rates at 8% state of charge with no alternative in reach. Scoring every charger you could
+          still reach — not just the nearest one — is the core of{" "}
           <A href="/guides/how-wattway-plans-your-trip">how WattWay plans a trip</A>.
         </P>
       </section>
@@ -295,10 +307,19 @@ function HowItWorksGuide() {
           significantly more than the best one.
         </P>
         <P>
-          Greedy choices are what make it expensive. Stop at the first reachable charger every time
-          and you will regularly buy premium electricity because you are at 8% with nothing else in
+          Stopping at the first reachable charger every time is what makes it expensive: you
+          regularly end up buying premium electricity because you are at 8% with nothing else in
           range. The stop that saves you money is frequently one you have to pass a closer charger
-          to reach — a decision you can only make by looking at the whole route at once.
+          to reach.
+        </P>
+        <P>
+          <strong className="text-[var(--text)]">To be precise about what WattWay does:</strong> it
+          is a greedy heuristic, not a global optimizer. It walks the route once, and at each step
+          scores every charger still reachable on the current charge and commits to the best-scoring
+          one. It does not enumerate whole stop sequences and compare them, so a route where a
+          locally cheap stop leads to an expensive stretch afterwards can still come out worse than
+          the true optimum. In exchange it runs instantly in your browser and, in practice, beats
+          nearest-charger planning by a wide margin.
         </P>
       </section>
 
@@ -330,10 +351,11 @@ function HowItWorksGuide() {
             reserve intact.
           </li>
           <li>
-            <strong className="text-[var(--text)]">Score reachable candidates on total cost.</strong>{" "}
+            <strong className="text-[var(--text)]">Score reachable candidates and commit.</strong>{" "}
             Effective price per kWh, plus a penalty per mile of detour (a charger off the highway
             costs range and time in both directions), plus a penalty for stalls under 150 kW, which
-            buy the same energy at the price of your afternoon. The best-scoring station wins.
+            buy the same energy at the price of your afternoon. The best-scoring station wins and
+            the planner moves on — it does not revisit that choice later.
           </li>
           <li>
             <strong className="text-[var(--text)]">Charge to 80%, or further only if forced.</strong>{" "}
@@ -379,6 +401,7 @@ function HowItWorksGuide() {
       <section className="space-y-3">
         <H2 id="what-it-wont-do">What it deliberately doesn&apos;t do</H2>
         <P>
+          It does not search for the globally cheapest stop sequence — see the greedy caveat above.
           It does not model per-minute billing, idle fees or session fees, because those vary by
           site and by how long you linger — things the planner cannot know. It does not check live
           stall availability, so a station shown as available may be occupied or broken when you

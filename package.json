@@ -7,8 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "generate:llms": "tsx scripts/generate-llms.mjs",
-    "check:llms": "tsx scripts/generate-llms.mjs && git diff --exit-code -- public/llms.txt public/llms-full.txt"
+    "postbuild": "tsx scripts/generate-llms.mjs"
   },
   "dependencies": {
     "@googlemaps/js-api-loader": "^2.1.1",

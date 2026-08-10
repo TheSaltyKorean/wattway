@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import ContentPage, { JsonLd } from "@/components/ContentPage";
-import { SITE_URL } from "@/lib/seo";
+import { SITE_URL, pageSocialMetadata } from "@/lib/seo";
 import { GUIDES } from "@/lib/guides";
 
 const TITLE = "EV Road Trip Guides — Charging Cost & Planning";
@@ -13,7 +13,7 @@ export const metadata: Metadata = {
   title: TITLE,
   description: DESCRIPTION,
   alternates: { canonical: "/guides" },
-  openGraph: { type: "website", title: TITLE, description: DESCRIPTION, url: `${SITE_URL}/guides` },
+  ...pageSocialMetadata({ title: TITLE, description: DESCRIPTION, path: "/guides", type: "website" }),
 };
 
 export default function GuidesIndexPage() {
