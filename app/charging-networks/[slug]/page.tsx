@@ -90,6 +90,11 @@ export default async function NetworkPage({
   const vehicles = sampleVehicles();
   const windowPct = `${Math.round(MIN_SOC * 100)}-${Math.round(CHARGE_TO_SOC * 100)}%`;
   const vsAverage = network.pricePerKwh - average;
+  // The average is unrounded (e.g. $0.435), so a network half a cent away has a
+  // real but sub-cent delta that usd() prints as "$0.00" — which then reads as
+  // "$0.00/kWh above the average". Anything that rounds to zero is "at the
+  // average" instead.
+  const atAverage = Math.abs(vsAverage) < 0.005;
 
   const faqs = [
     {
@@ -98,8 +103,8 @@ export default async function NetworkPage({
         `WattWay prices ${network.name} at about ${perKwh(network.pricePerKwh)} for DC fast ` +
         `charging, which makes it the ${rank}${ordinal(rank)} cheapest of the ${all.length} networks ` +
         `it tracks${tiedCount > 1 ? ` (tied with ${tiedCount - 1} other at the same rate)` : ""} and ` +
-        `${vsAverage <= 0 ? "below" : "above"} the ${perKwh(average)} average by ` +
-        `${usd(Math.abs(vsAverage))} per kWh. Actual rates vary by site, time of day and local ` +
+        `${atAverage ? `right at the ${perKwh(average)} average` : `${vsAverage < 0 ? "below" : "above"} the ${perKwh(average)} average by ${usd(Math.abs(vsAverage))} per kWh`}. ` +
+        `Actual rates vary by site, time of day and local ` +
         `taxes; when a station publishes its own price, the planner uses that instead.`,
     },
     {
@@ -143,9 +148,9 @@ export default async function NetworkPage({
         <p>
           {network.name} DC fast charging runs about {perKwh(network.pricePerKwh)} — the {rank}
           {ordinal(rank)} cheapest of the {all.length} networks WattWay prices, and{" "}
-          {vsAverage <= 0
-            ? `${usd(Math.abs(vsAverage))}/kWh below`
-            : `${usd(vsAverage)}/kWh above`}{" "}
+          {atAverage
+            ? "right at"
+            : `${usd(Math.abs(vsAverage))}/kWh ${vsAverage < 0 ? "below" : "above"}`}{" "}
           the {perKwh(average)} average.{" "}
           <Link href="/" className="text-[var(--accent)] hover:underline">
             Plan a route
@@ -192,8 +197,8 @@ export default async function NetworkPage({
               plan ? "With membership" : "No membership",
             ],
             [
-              `${vsAverage <= 0 ? "−" : "+"}${usd(Math.abs(vsAverage))}`,
-              "vs network average",
+              atAverage ? "—" : `${vsAverage < 0 ? "−" : "+"}${usd(Math.abs(vsAverage))}`,
+              atAverage ? "At the network average" : "vs network average",
             ],
           ].map(([value, label]) => (
             <div

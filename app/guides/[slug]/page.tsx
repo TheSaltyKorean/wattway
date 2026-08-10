@@ -91,7 +91,8 @@ export default async function GuidePage({ params }: { params: Promise<{ slug: st
         <h2 className="text-lg font-semibold text-[var(--text)]">Plan your trip</h2>
         <p className="mt-2 text-sm leading-relaxed text-[var(--text-muted)]">
           WattWay applies all of this to your actual route: real charger locations and prices along
-          your highway, your car&apos;s real battery and charge curve, and any memberships you hold.
+          your highway, your car&apos;s battery and peak charge rate (from which it approximates the
+          charge curve — it carries no measured per-vehicle curve), and any memberships you hold.
           Free, no account.
         </p>
         <Link

@@ -235,11 +235,13 @@ function CostGuide() {
         <P>
           <strong className="text-[var(--text)]">Charge at home before you leave.</strong> The first{" "}
           {Math.round(fastChargeMiles(ev))} miles of the trip can come out of your driveway at{" "}
-          {perKwh(HOME_RATE)} instead of {perKwh(avgCommercial)}. That single decision saves about{" "}
+          {perKwh(HOME_RATE)} instead of {perKwh(avgCommercial)}. That is worth up to{" "}
           {usd(
             (fastChargeMiles(ev) / ev.efficiencyMilesPerKwh) * (avgCommercial - HOME_RATE)
           )}{" "}
-          on every trip and costs nothing.
+          and costs nothing — though only on a trip long enough to actually spend that whole
+          window. A trip shorter than {Math.round(fastChargeMiles(ev))} miles saves proportionally
+          less, because you only avoid buying the energy you actually use.
         </P>
         <P>
           <strong className="text-[var(--text)]">Buy the membership for the month you travel.</strong>{" "}
@@ -384,8 +386,11 @@ function HowItWorksGuide() {
         <H2 id="assumptions">The assumptions, stated plainly</H2>
         <P>
           <strong className="text-[var(--text)]">A 10% floor.</strong> The planner never plans to
-          arrive below 10%. That reserve is what absorbs a closed charger, a headwind or a
-          miscalculation.
+          arrive at a <em>charger</em> below 10%, and 10% is the default target for your
+          destination. That reserve is what absorbs a closed charger, a headwind or a
+          miscalculation. The one exception is deliberate: if you set an intermediate stop&apos;s
+          own arrival target below 10%, the planner honors the number you typed rather than
+          overriding it — so that stop can be planned below the reserve.
         </P>
         <P>
           <strong className="text-[var(--text)]">85% of nameplate power.</strong> No car holds its

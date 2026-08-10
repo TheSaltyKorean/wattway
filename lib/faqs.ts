@@ -44,9 +44,12 @@ export function siteFAQs(): FAQ[] {
     {
       q: "Does WattWay cost anything, or need an account?",
       a:
-        "No and no. There is no sign-up, no login, no paywall and no account of any kind. It runs " +
-        "entirely in your browser as a static site — there is no server holding user data because " +
-        "there is no server.",
+        "No and no. There is no sign-up, no login, no paywall and no account of any kind. The " +
+        "planner runs entirely in your browser as a static site, with no application backend that " +
+        "stores anything about you. The one server-side piece is a counter: a successful plan " +
+        "sends an empty same-origin beacon to /api/plan so the operator can see how often the tool " +
+        "is used. It records no addresses, no route, no vehicle and no request body — just that a " +
+        "plan happened.",
     },
     {
       q: "How does WattWay choose where to stop?",
@@ -106,8 +109,10 @@ export function siteFAQs(): FAQ[] {
         "It has nowhere to put it. Your car, memberships, excluded networks and custom specs live in " +
         "your browser's local storage. The origin and destination you type are sent to Google and " +
         "Open Charge Map to compute the route and find chargers, because that is the only way to " +
-        "answer the question. Nothing is stored on a WattWay server, because there isn't one. " +
-        "Aggregate, non-identifying usage counts are collected to know whether the thing is used.",
+        "answer the question, and they are not retained by WattWay afterwards. The only " +
+        "server-side component is an aggregate counter (an empty beacon to /api/plan on each " +
+        "successful plan) plus privacy-preserving page analytics; neither records addresses, " +
+        "routes, vehicles or anything identifying.",
     },
     {
       q: "Can I exclude networks I don't want to use?",
