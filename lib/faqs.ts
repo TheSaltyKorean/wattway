@@ -48,9 +48,9 @@ export function siteFAQs(): FAQ[] {
         "planner runs entirely in your browser as a static site, with no application backend that " +
         "stores anything about you. There is one server-side piece — a counter: a successful plan " +
         "sends an empty same-origin beacon to /api/plan so the operator can see how often the tool " +
-        "is used. That beacon has no body at all. Separately, aggregate analytics may record a " +
-        "handful of non-identifying fields about a plan; see \"What does WattWay do with my " +
-        "data?\" below for exactly which.",
+        "is used. That beacon has no body at all. Separately, if analytics is configured, Google " +
+        "Analytics records a plan event — with its own cookie-based client and session ids. See " +
+        "\"What does WattWay do with my data?\" below for exactly what each one collects.",
     },
     {
       q: "How does WattWay choose where to stop?",
@@ -114,11 +114,17 @@ export function siteFAQs(): FAQ[] {
         "answer the question, and they are not retained by WattWay afterwards. Two things are " +
         "measured. First, an empty beacon to /api/plan on each successful plan — no body, no " +
         "content at all, just a count. Second, if analytics is configured for the deployment, a " +
-        "Google Analytics `plan_trip` event carrying five non-identifying fields: the number of " +
+        "Google Analytics 4 `plan_trip` event. WattWay attaches five fields to it: the number of " +
         "stops, the trip distance rounded to the nearest mile, how many intermediate stops you " +
         "added, the id of the vehicle profile you selected, and whether the plan came out " +
-        "incomplete. No origin, destination, waypoint, address or coordinate is ever sent to " +
-        "analytics, and nothing links an event to you.",
+        "incomplete. No origin, destination, waypoint, address or coordinate is ever sent. " +
+        "Those five are only what WattWay supplies, though — GA4 adds its own collection on top: " +
+        "a pseudonymous client id stored in a cookie, a session id, the page URL and referrer, " +
+        "your device, browser and language, and an approximate location derived from your IP " +
+        "address. So a plan event is tied to your browser and session inside Google's data, even " +
+        "though it carries no name, account or route from us. If you would rather not be counted, " +
+        "any ad or tracking blocker stops the GA4 tag; the /api/plan beacon is same-origin and has " +
+        "nothing in it to identify you.",
     },
     {
       q: "Can I exclude networks I don't want to use?",
