@@ -142,7 +142,10 @@ export function siteFAQs(): FAQ[] {
         "Google Analytics 4 `plan_trip` event. WattWay attaches five fields to it: the number of " +
         "stops, the trip distance rounded to the nearest mile, how many intermediate stops you " +
         "added, the id of the vehicle profile you selected, and whether the plan came out " +
-        "incomplete. No origin, destination, waypoint, address or coordinate is ever sent. " +
+        "incomplete. No origin, destination, waypoint, address or coordinate is ever sent. If a " +
+        "planning attempt fails instead — a routing or charger-data request erroring out — a bare " +
+        "`plan_trip_error` event is sent with no parameters at all, so unsuccessful attempts are " +
+        "counted too. " +
         "Those five are only what WattWay supplies, though — GA4 adds its own collection on top: " +
         "a pseudonymous client id stored in a cookie, a session id, the page URL and referrer, " +
         "your device, browser and language, and an approximate location derived from your IP " +
