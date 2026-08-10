@@ -124,7 +124,7 @@ ${CONTEXT}
 
 - **What it does**: Plans an EV road trip to minimize total charging cost and time by choosing a minimal, cheap set of charging stops along the route.
 - **How it differs from a generic map**: It optimizes for total charging *cost* — not just "any charger nearby" — factoring in each network's pricing, the driver's membership plans, charger speed (kW), and reliability, plus the vehicle's usable battery and range.
-- **Method**: A greedy heuristic, not a global optimizer. It walks the route once and, at each step, commits to the best-scoring charger still reachable. It does not compare whole stop sequences.
+- **Method**: A greedy heuristic, not a global optimizer. It walks the route once and, at each step, scores only the stations in the far ${Math.round((1 - math.CANDIDATE_WINDOW) * 100)}% of what the current charge can reach (so it stops as few times as possible), then commits to the best without revisiting it. A cheap charger early in the reachable stretch is skipped rather than compared, and whole stop sequences are never compared.
 - **Vehicles supported**: ${EV_DATABASE.length} EV profiles across ${makes.length} makes (${makes.join(", ")}), split by spec generation, plus a custom-vehicle option for entering real-world battery/range/charge specs.
 - **Charging networks priced**: ${networks.length} (${networks.map((n) => n.name).join(", ")}), from ${seo.perKwh(networks[0].pricePerKwh)} to ${seo.perKwh(networks[networks.length - 1].pricePerKwh)} per kWh as of ${PRICING_YEAR}.
 - **Cost to use**: Free. No sign-up or account required.
@@ -171,8 +171,9 @@ const pctMax = Math.round(math.CHARGE_TO_SOC * 100);
 w(`- Planning window: charge from ${pctMin}% to ${pctMax}% state of charge; the planner goes above ${pctMax}% only when the next gap requires it.`);
 w(`- Average power below ${pctMax}%: ${Math.round(math.CHARGE_TAPER_FACTOR * 100)}% of the vehicle's nameplate peak kW, capped by the stall's output.`);
 w(`- Average power above ${pctMax}%: ${Math.round(math.ABOVE_80_TAPER_FACTOR * 100)}% of the below-${pctMax}% rate.`);
-w(`- Stop scoring: effective price per kWh after memberships, plus a penalty per mile of detour, plus a penalty for stalls under 150 kW. Greedy — the best reachable candidate is committed to and not revisited.`);
-w(`- Unrecognized operators are priced at ${seo.perKwh(seo.DEFAULT_PRICE_PER_KWH)}.`);
+w(`- Candidate filter: only stations in the far ${Math.round((1 - math.CANDIDATE_WINDOW) * 100)}% of the currently reachable stretch are scored; the near ${Math.round(math.CANDIDATE_WINDOW * 100)}% is skipped so the plan stops as few times as possible.`);
+w(`- Stop scoring: effective price per kWh after memberships, plus a penalty per mile of detour, plus a penalty for stalls under 150 kW. Greedy — the best candidate is committed to and not revisited.`);
+w(`- Pricing: a station's own published rate (via Open Charge Map) wins; the per-network reference rate is only a fallback. Unrecognized operators are priced at ${seo.perKwh(seo.DEFAULT_PRICE_PER_KWH)}.`);
 w(`- Home charging is referenced at ${seo.perKwh(seo.HOME_PRICE_PER_KWH)} for the road-vs-driveway comparison.`);
 w();
 

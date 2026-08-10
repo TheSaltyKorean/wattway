@@ -1,5 +1,6 @@
 import { EV_DATABASE } from "./evDatabase";
 import { chargingNetworks, perKwh } from "./seo";
+import { CANDIDATE_WINDOW } from "./chargingMath";
 
 export interface FAQ {
   q: string;
@@ -19,6 +20,9 @@ export function siteFAQs(): FAQ[] {
   const cheapest = networks[0];
   const priciest = networks[networks.length - 1];
   const makes = new Set(EV_DATABASE.map((e) => e.make)).size;
+  // Derived from the planner's own constant so the description can't drift.
+  const farPct = Math.round((1 - CANDIDATE_WINDOW) * 100);
+  const nearPct = Math.round(CANDIDATE_WINDOW * 100);
 
   return [
     {
@@ -48,13 +52,17 @@ export function siteFAQs(): FAQ[] {
       q: "How does WattWay choose where to stop?",
       a:
         "It routes your trip, pulls chargers along the corridor in segments, then walks the route " +
-        "keeping track of state of charge. At each point it scores every charger still reachable on " +
-        "effective price per kWh after memberships, plus penalties for detour distance and for " +
-        "stalls under 150 kW, and commits to the best one. It charges to 80% by default because " +
-        "charging past that is disproportionately slow, going higher only when the next gap demands " +
-        "it. This is a greedy heuristic rather than a global optimizer: it does not enumerate and " +
-        "compare whole stop sequences, so it is not guaranteed to find the theoretically cheapest " +
-        "plan — but it runs instantly and beats nearest-charger planning by a wide margin.",
+        "keeping track of state of charge. At each step it works out how far the current charge " +
+        `can reach and scores only the stations in the far ${farPct}% of that stretch — ` +
+        "deliberately, so it stops as few times as possible — ranking them on effective price per " +
+        "kWh after memberships, plus penalties for detour distance and for stalls under 150 kW, " +
+        "then commits to the best one without revisiting it. It charges to 80% by default because " +
+        "charging past that is disproportionately slow, going higher only when the next gap " +
+        "demands it. Two limits follow from this: a cheap charger sitting early in the reachable " +
+        `stretch (the near ${nearPct}%) is skipped rather than compared, and because whole stop ` +
+        "sequences are never compared, this is a greedy heuristic rather than a global optimizer — " +
+        "not guaranteed to find the theoretically cheapest plan, but it runs instantly and beats " +
+        "nearest-charger planning by a wide margin.",
     },
     {
       q: "Where does the charger and pricing data come from?",

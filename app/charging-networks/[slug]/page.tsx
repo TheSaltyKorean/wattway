@@ -126,9 +126,12 @@ export default async function NetworkPage({
       : {
           q: `Does ${network.name} have a membership or subscription?`,
           a:
-            `WattWay doesn't model a subscription for ${network.name}, so it prices every session ` +
-            `at the standard ${perKwh(network.pricePerKwh)} rate. If the network introduces a plan ` +
-            `worth modeling it will be added to the planner's membership list.`,
+            `WattWay doesn't model a subscription for ${network.name}, so no membership discount is ` +
+            `applied to its sessions. That does not mean every stop is priced at ` +
+            `${perKwh(network.pricePerKwh)}: when a station publishes its own rate through Open ` +
+            `Charge Map the planner uses that, and this reference rate is only the fallback for ` +
+            `stations that don't. If the network introduces a plan worth modeling it will be added ` +
+            `to the planner's membership list.`,
         },
   ];
 
@@ -290,7 +293,11 @@ export default async function NetworkPage({
                     </th>
                     <td className="py-2 pr-4 text-[var(--text)]">{perKwh(n.pricePerKwh)}</td>
                     <td className="py-2 text-[var(--text-muted)]">
-                      {isSelf ? "—" : `${delta > 0 ? "+" : "−"}${usd(Math.abs(delta))}/kWh`}
+                      {isSelf
+                        ? "—"
+                        : delta === 0
+                          ? "same rate"
+                          : `${delta > 0 ? "+" : "−"}${usd(Math.abs(delta))}/kWh`}
                     </td>
                   </tr>
                 );

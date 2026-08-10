@@ -295,6 +295,10 @@ export function perKwh(value: number): string {
 
 /** Minutes as "48 min" or "1 hr 12 min". */
 export function duration(minutes: number): string {
+  // A genuinely tiny-but-nonzero duration is real — a final top-up of a few
+  // miles can be well under a minute — and rounding it to "0 min" next to a
+  // nonzero stop count and cost reads as a contradiction.
+  if (minutes > 0 && minutes < 0.5) return "<1 min";
   const total = Math.round(minutes);
   if (total < 60) return `${total} min`;
   const hours = Math.floor(total / 60);
