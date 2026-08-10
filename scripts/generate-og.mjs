@@ -50,8 +50,8 @@ const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" v
   <text x="240" y="240" font-family="DejaVu Sans, Arial, sans-serif" font-size="104" font-weight="700" fill="${TEXT}">WattWay</text>
 
   <!-- tagline -->
-  <text x="122" y="360" font-family="DejaVu Sans, Arial, sans-serif" font-size="42" font-weight="700" fill="${TEXT}">Find the <tspan fill="${ACCENT}">cheapest</tspan> way to charge</text>
-  <text x="122" y="416" font-family="DejaVu Sans, Arial, sans-serif" font-size="42" font-weight="700" fill="${TEXT}">on any EV road trip.</text>
+  <text x="122" y="360" font-family="DejaVu Sans, Arial, sans-serif" font-size="42" font-weight="700" fill="${TEXT}">Charge for <tspan fill="${ACCENT}">less</tspan> on any</text>
+  <text x="122" y="416" font-family="DejaVu Sans, Arial, sans-serif" font-size="42" font-weight="700" fill="${TEXT}">EV road trip.</text>
 
   <!-- sub -->
   <text x="122" y="478" font-family="DejaVu Sans, Arial, sans-serif" font-size="26" fill="${MUTED}">Optimized for price, your range &amp; charger reliability</text>

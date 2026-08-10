@@ -144,7 +144,7 @@ ${GUIDE_META.map((g) => `  - [${g.title}](${SITE_URL}/guides/${g.slug}): ${g.des
 
 ## Optional
 
-- [Full text corpus](${SITE_URL}/llms-full.txt): Every vehicle spec, network price, guide and FAQ answer as plain text, in one file.
+- [Full text corpus](${SITE_URL}/llms-full.txt): Every vehicle spec and network price, the full text of all guides, and the site-wide FAQ, as plain text in one file. Note: the per-vehicle and per-network Q&A shown on individual pages is not duplicated here — those answers are derived from the vehicle and network tables in this file, and are also published as FAQPage structured data on each page.
 `;
 
 // --- llms-full.txt ----------------------------------------------------------
@@ -169,7 +169,7 @@ w("## Charging model");
 w();
 const pctMin = Math.round(math.MIN_SOC * 100);
 const pctMax = Math.round(math.CHARGE_TO_SOC * 100);
-w(`- Planning window: charge from ${pctMin}% to ${pctMax}% state of charge; the planner goes above ${pctMax}% only when the next gap requires it.`);
+w(`- Planning window: charge from ${pctMin}% to ${pctMax}% state of charge. Two things push a stop above ${pctMax}%: a gap to the next charger that requires it, and a high requested "charge needed at arrival" (the planner targets that requested percentage plus a small pad, so requesting ${pctMax}% aims for about ${pctMax + 3}% before the drive to the destination is counted). The final stop goes the other way, taking only what the destination needs.`);
 w(`- Average power below ${pctMax}%: ${Math.round(math.CHARGE_TAPER_FACTOR * 100)}% of the vehicle's nameplate peak kW, capped by the stall's output.`);
 w(`- Average power above ${pctMax}%: ${Math.round(math.ABOVE_80_TAPER_FACTOR * 100)}% of the below-${pctMax}% rate.`);
 w(`- Candidate filter: only stations in the far ${Math.round((1 - math.CANDIDATE_WINDOW) * 100)}% of the currently reachable stretch are scored; the near ${Math.round(math.CANDIDATE_WINDOW * 100)}% is skipped. This pushes toward fewer stops but does not guarantee the fewest — an earlier station inside the window can still win on score and force an extra stop later.`);
@@ -246,7 +246,7 @@ w();
 
 w("## Frequently asked questions");
 w();
-w(`Source: ${SITE_URL}/faq`);
+w(`Source: ${SITE_URL}/faq — the site-wide FAQ. Individual vehicle pages (${SITE_URL}/ev/...) and network pages (${SITE_URL}/charging-networks/...) each carry their own additional Q&A, published as FAQPage structured data on those pages; the underlying figures are in the tables above.`);
 w();
 for (const faq of faqs) {
   w(`### ${faq.q}`);

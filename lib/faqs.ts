@@ -71,7 +71,10 @@ export function siteFAQs(): FAQ[] {
         "route. It then commits to the best one without revisiting it. Intermediate stops charge to 80% by " +
         "default because charging past that is disproportionately slow, going higher only when the " +
         "next gap demands it; the last stop takes only what the destination actually needs, so it " +
-        "usually leaves well below 80%. Two limits follow from this: a cheap charger sitting early in the reachable " +
+        "usually leaves well below 80% — unless you raise \"charge needed at arrival\", which is a " +
+        "second reason it can go above 80%: the planner targets your requested arrival percentage " +
+        "plus a small pad, so asking to arrive at 80% aims for about 83% before the drive to the " +
+        "destination is even counted. Two limits follow from this: a cheap charger sitting early in the reachable " +
         `stretch (the near ${nearPct}%) is skipped rather than compared, and because whole stop ` +
         "sequences are never compared, this is a greedy heuristic rather than a global optimizer — " +
         "not guaranteed to find the theoretically cheapest plan, but it runs instantly and beats " +
@@ -182,8 +185,10 @@ export function siteFAQs(): FAQ[] {
         "Because the last 20% is where a DC fast charge stops being fast. The charge curve tapers " +
         "hard above 80%, so those final miles can take as long as the first 70% did. Adding another " +
         "stop is usually quicker overall than waiting out the taper. WattWay goes above 80% only " +
-        "when the next charger is far enough that it has to — and it goes below, taking only what " +
-        "is needed, at a final stop that already puts the destination in range.",
+        "when the next charger is far enough that it has to, or when you have asked to arrive with " +
+        "a high state of charge — it targets your requested arrival percentage plus a small pad, so " +
+        "a high setting pushes the last stops above 80%. It goes below 80% too, taking only what is " +
+        "needed, at a final stop that already puts the destination in range.",
     },
   ];
 }

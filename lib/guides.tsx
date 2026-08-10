@@ -379,9 +379,10 @@ function HowItWorksGuide() {
           </li>
           <li>
             <strong className="text-[var(--text)]">Charge to 80% — or less, or more.</strong>{" "}
-            Intermediate stops top up to 80% by default. When the next gap demands more, the planner
-            charges higher and prices the taper honestly — energy above 80% arrives at roughly 40%
-            of the rate below it. The last stop goes the other way: once the destination is in
+            Intermediate stops top up to 80% by default. Two things push it higher: a gap that
+            demands more, and a high &quot;charge needed at arrival&quot; setting, since the planner
+            targets that requested percentage plus a small pad. Either way it prices the taper
+            honestly — energy above 80% arrives at roughly 40% of the rate below it. The last stop goes the other way: once the destination is in
             range it takes only the energy needed to get there, so it commonly leaves well under
             80%.
           </li>
@@ -623,7 +624,7 @@ export const GUIDES: Guide[] = [
         { "@type": "HowToStep", name: "Price every candidate", text: "Give each station an effective cost per kWh from its published rate or its operator's reference rate, minus discounts from memberships you hold, and remove excluded networks." },
         { "@type": "HowToStep", name: "Track state of charge along the route", text: "Advance along the route from your actual starting battery level, considering only chargers reachable with the reserve intact." },
         { "@type": "HowToStep", name: "Score the far candidates", text: `Of the stations still reachable, keep only those in the far ${Math.round((1 - CANDIDATE_WINDOW) * 100)}% of that range, which pushes toward fewer stops without guaranteeing the fewest. Rank those candidates on effective price per kWh, adjusted by penalties for detour distance, for stalls below 150 kW (doubled below 100 kW), for a single fast port, for a station not recently verified, for arriving below 15% state of charge, and for an operator-less Supercharger record when the vehicle is not Tesla-eligible, plus a mild preference for stations farther along the route. Commit to the best without revisiting it.` },
-        { "@type": "HowToStep", name: "Charge to 80 percent", text: "Top up to 80% at intermediate stops, charging higher only when the next gap requires it, because charging past 80% is disproportionately slow; the final stop takes only the energy the destination needs and usually leaves below 80%." },
+        { "@type": "HowToStep", name: "Charge to 80 percent", text: "Top up to 80% at intermediate stops, because charging past 80% is disproportionately slow. Charge higher when the next gap requires it, or when the driver has requested a high arrival state of charge (the planner targets that requested percentage plus a small pad). The final stop takes only the energy the destination needs and usually leaves below 80%." },
         { "@type": "HowToStep", name: "Repeat to the destination", text: "Continue until the destination is reachable, producing per-stop cost, energy, charge time, detour and arrival state of charge. The planner can also stop short and return a partial sequence flagged incomplete, for two distinct reasons: no charger remains within reach (a real coverage gap on that route), or an internal 50-stop cap is exhausted while reachable chargers may still exist. The flag does not distinguish them." },
       ],
     },
