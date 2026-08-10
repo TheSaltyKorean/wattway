@@ -17,9 +17,20 @@ const here = dirname(fileURLToPath(import.meta.url));
 const root = join(here, "..");
 const outDir = join(root, "out");
 
+// npm runs "postbuild" after every `npm run build`, including a plain dev build.
+// Without GITHUB_PAGES=true, next.config.mjs leaves `output` unset and Next
+// writes .next/ rather than out/, so there is nothing to generate from — skip
+// rather than breaking the ordinary local build path.
+if (process.env.GITHUB_PAGES !== "true") {
+  console.log("llms: skipped (not a static-export build; set GITHUB_PAGES=true)");
+  process.exit(0);
+}
+
+// On an export build the output must exist. Failing loudly here is deliberate:
+// a silently missing llms.txt would go unnoticed for months.
 if (!existsSync(outDir)) {
   throw new Error(
-    `No build output at ${outDir}. Run this after \`next build\` (it is wired up as "postbuild").`
+    `GITHUB_PAGES=true but no build output at ${outDir}. Run this after \`next build\`.`
   );
 }
 

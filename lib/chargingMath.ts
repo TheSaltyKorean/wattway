@@ -16,6 +16,14 @@ export const CHARGE_TO_SOC = 0.80;
 export const CHARGE_TAPER_FACTOR = 0.85;
 /** Average power above 80% as a fraction of the below-80% rate. */
 export const ABOVE_80_TAPER_FACTOR = 0.4;
+/**
+ * Of the stretch the car can still reach, only stations past this fraction of it
+ * are scored — the planner deliberately pushes each stop as far down the route as
+ * it safely can, to minimize the number of stops. Shared with the content pages
+ * so they describe the real candidate filter rather than "every reachable
+ * charger", which would overstate what the planner considers.
+ */
+export const CANDIDATE_WINDOW = 0.55;
 
 /** kWh moved in a standard 10% -> 80% DC fast-charge session. */
 export function fastChargeKwh(ev: EVModel): number {
@@ -104,4 +112,23 @@ export function tripEnergyCost(
     (homeMiles / ev.efficiencyMilesPerKwh) * homePricePerKwh +
     enRouteEnergyCost(ev, tripMiles, pricePerKwh)
   );
+}
+
+/**
+ * Best-case minutes spent charging on a trip of `tripMiles`.
+ *
+ * Derived from the energy actually bought en route rather than
+ * `stops x full-session time`: the last stop is almost always a partial top-up,
+ * so multiplying by whole sessions materially overstates the total. A car that
+ * needs 14 more miles buys about a minute of charging, not a full 10-80% window.
+ */
+export function enRouteChargeMinutes(
+  ev: EVModel,
+  tripMiles: number,
+  stationKw = ev.maxChargekW
+): number {
+  const effectiveKw = Math.min(stationKw, ev.maxChargekW) * CHARGE_TAPER_FACTOR;
+  if (effectiveKw <= 0 || ev.efficiencyMilesPerKwh <= 0) return 0;
+  const purchasedMiles = Math.max(0, tripMiles - fastChargeMiles(ev));
+  return ((purchasedMiles / ev.efficiencyMilesPerKwh) / effectiveKw) * 60;
 }

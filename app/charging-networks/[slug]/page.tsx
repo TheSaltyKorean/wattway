@@ -78,7 +78,11 @@ export default async function NetworkPage({
   if (!network) notFound();
 
   const all = chargingNetworks();
-  const rank = all.findIndex((n) => n.slug === network.slug) + 1;
+  // Rank by how many networks are strictly cheaper, not by list index: the list
+  // breaks price ties alphabetically, which would otherwise present two networks
+  // at the same rate as "4th" and "5th cheapest" and imply a difference.
+  const rank = all.filter((n) => n.pricePerKwh < network.pricePerKwh).length + 1;
+  const tiedCount = all.filter((n) => n.pricePerKwh === network.pricePerKwh).length;
   const cheapest = all[0];
   const priciest = all[all.length - 1];
   const average = all.reduce((sum, n) => sum + n.pricePerKwh, 0) / all.length;
@@ -93,7 +97,8 @@ export default async function NetworkPage({
       a:
         `WattWay prices ${network.name} at about ${perKwh(network.pricePerKwh)} for DC fast ` +
         `charging, which makes it the ${rank}${ordinal(rank)} cheapest of the ${all.length} networks ` +
-        `it tracks and ${vsAverage <= 0 ? "below" : "above"} the ${perKwh(average)} average by ` +
+        `it tracks${tiedCount > 1 ? ` (tied with ${tiedCount - 1} other at the same rate)` : ""} and ` +
+        `${vsAverage <= 0 ? "below" : "above"} the ${perKwh(average)} average by ` +
         `${usd(Math.abs(vsAverage))} per kWh. Actual rates vary by site, time of day and local ` +
         `taxes; when a station publishes its own price, the planner uses that instead.`,
     },
@@ -175,7 +180,10 @@ export default async function NetworkPage({
         <div className="mt-4 grid grid-cols-2 sm:grid-cols-4 gap-3">
           {[
             [perKwh(network.pricePerKwh), "Reference rate"],
-            [`#${rank} of ${all.length}`, "Cheapest ranking"],
+            [
+              `#${rank} of ${all.length}`,
+              tiedCount > 1 ? `Cheapest ranking (${tiedCount}-way tie)` : "Cheapest ranking",
+            ],
             [
               plan ? perKwh(network.pricePerKwh - plan.discountPerKwh) : "—",
               plan ? "With membership" : "No membership",

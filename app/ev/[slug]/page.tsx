@@ -27,6 +27,7 @@ import {
   fastChargeMinutes,
   stopsForTrip,
   enRouteEnergyCost,
+  enRouteChargeMinutes,
   CHARGE_TO_SOC,
   MIN_SOC,
 } from "@/lib/chargingMath";
@@ -377,7 +378,7 @@ export default async function EVPage({ params }: { params: Promise<{ slug: strin
                     </th>
                     <td className="py-2 pr-4 text-[var(--text)]">{stops}</td>
                     <td className="py-2 pr-4 text-[var(--text-muted)]">
-                      {duration(stops * chargeMinutes)}
+                      {duration(enRouteChargeMinutes(ev, distance))}
                     </td>
                     <td className="py-2 text-[var(--text)]">
                       {usd(enRouteEnergyCost(ev, distance, cheapest.pricePerKwh))} –{" "}
@@ -390,7 +391,10 @@ export default async function EVPage({ params }: { params: Promise<{ slug: strin
           </table>
         </div>
         <p className="mt-4 text-sm leading-relaxed text-[var(--text-muted)]">
-          The cost column is what you buy <em>at chargers</em>: the first{" "}
+          Charging time is computed from the energy actually bought, not from whole sessions — the
+          last stop is nearly always a partial top-up, so counting it as a full {windowPct} charge
+          would overstate the total. The cost column is likewise what you buy <em>at chargers</em>:
+          the first{" "}
           {Math.round(milesPerCharge)} miles run on the charge you left home with, so a trip shorter
           than that shows nothing bought en route. This is also the idealized version — evenly
           spaced chargers, every one working, no detours. A

@@ -19,6 +19,7 @@ import {
   stopsForTrip,
   enRouteEnergyCost,
   energyCostForMiles,
+  CANDIDATE_WINDOW,
 } from "./chargingMath";
 
 export interface Guide extends GuideMeta {
@@ -314,12 +315,15 @@ function HowItWorksGuide() {
         </P>
         <P>
           <strong className="text-[var(--text)]">To be precise about what WattWay does:</strong> it
-          is a greedy heuristic, not a global optimizer. It walks the route once, and at each step
-          scores every charger still reachable on the current charge and commits to the best-scoring
-          one. It does not enumerate whole stop sequences and compare them, so a route where a
-          locally cheap stop leads to an expensive stretch afterwards can still come out worse than
-          the true optimum. In exchange it runs instantly in your browser and, in practice, beats
-          nearest-charger planning by a wide margin.
+          is a greedy heuristic, not a global optimizer, and it narrows the field twice. At each
+          step it works out how far the current charge can reach, then scores only the stations in
+          the far {Math.round((1 - CANDIDATE_WINDOW) * 100)}% of that stretch — deliberately, so it
+          stops as few times as possible — and commits to the best-scoring one without revisiting
+          it. Two consequences worth knowing: a cheap charger sitting early in the reachable stretch
+          is skipped rather than compared, and because whole stop sequences are never compared, a
+          locally cheap stop that leads into an expensive stretch can still come out worse than the
+          true optimum. In exchange it runs instantly in your browser and beats nearest-charger
+          planning by a wide margin.
         </P>
       </section>
 
@@ -351,11 +355,14 @@ function HowItWorksGuide() {
             reserve intact.
           </li>
           <li>
-            <strong className="text-[var(--text)]">Score reachable candidates and commit.</strong>{" "}
-            Effective price per kWh, plus a penalty per mile of detour (a charger off the highway
-            costs range and time in both directions), plus a penalty for stalls under 150 kW, which
-            buy the same energy at the price of your afternoon. The best-scoring station wins and
-            the planner moves on — it does not revisit that choice later.
+            <strong className="text-[var(--text)]">Score the far candidates and commit.</strong>{" "}
+            Of everything still reachable, only stations in the far{" "}
+            {Math.round((1 - CANDIDATE_WINDOW) * 100)}% of that range are scored, so the plan does
+            not stop more often than it must. Each is ranked on effective price per kWh, plus a
+            penalty per mile of detour (a charger off the highway costs range and time in both
+            directions), plus a penalty for stalls under 150 kW, which buy the same energy at the
+            price of your afternoon. The best-scoring station wins and the planner moves on — it
+            does not revisit that choice later.
           </li>
           <li>
             <strong className="text-[var(--text)]">Charge to 80%, or further only if forced.</strong>{" "}
@@ -401,7 +408,9 @@ function HowItWorksGuide() {
       <section className="space-y-3">
         <H2 id="what-it-wont-do">What it deliberately doesn&apos;t do</H2>
         <P>
-          It does not search for the globally cheapest stop sequence — see the greedy caveat above.
+          It does not search for the globally cheapest stop sequence, and it does not consider
+          chargers in the near {Math.round(CANDIDATE_WINDOW * 100)}% of what it can reach — see the
+          caveats above.
           It does not model per-minute billing, idle fees or session fees, because those vary by
           site and by how long you linger — things the planner cannot know. It does not check live
           stall availability, so a station shown as available may be occupied or broken when you
@@ -427,7 +436,12 @@ function HowItWorksGuide() {
 function FastChargingGuide() {
   const networks = chargingNetworks();
   const avg = networks.reduce((s, n) => s + n.pricePerKwh, 0) / networks.length;
-  const fastCars = [...EV_DATABASE].sort((a, b) => b.maxChargekW - a.maxChargekW).slice(0, 8);
+  // By modeled 10-80% time, not nameplate kW — a 205 kWh truck at 350 kW takes
+  // roughly twice as long as an 89 kWh car at 300 kW, so ranking on peak power
+  // would contradict the time column right next to it.
+  const fastCars = [...EV_DATABASE]
+    .sort((a, b) => fastChargeMinutes(a) - fastChargeMinutes(b) || a.id.localeCompare(b.id))
+    .slice(0, 8);
 
   return (
     <>

@@ -16,6 +16,7 @@ import {
   CHARGE_TO_SOC,
   CHARGE_TAPER_FACTOR,
   ABOVE_80_TAPER_FACTOR,
+  CANDIDATE_WINDOW,
 } from "./chargingMath";
 
 const ROUTES_API_URL = "https://routes.googleapis.com/directions/v2:computeRoutes";
@@ -350,7 +351,6 @@ export async function fetchChargersAlongRoute(
   return stations;
 }
 
-const CANDIDATE_WINDOW = 0.55; // only consider stations in the far 45% of current reach
 const COMFORT_ARRIVAL_SOC = 0.15;
 const SLOW_CHARGER_PENALTY = 0.10; // $/kWh-equivalent penalty for <150 kW stations
 const LOW_ARRIVAL_PENALTY = 0.15; // $/kWh-equivalent penalty for arriving under 15%
