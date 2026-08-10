@@ -10,14 +10,17 @@
 # entirely, so a named agent whose group omitted this line would still crawl
 # /api/ no matter what the wildcard group said.
 #
-# NOTE: this file is not necessarily what a crawler receives. Cloudflare's
-# "managed robots.txt" feature, when enabled on the zone, PREPENDS its own block
-# that sends `Disallow: /` to GPTBot, ClaudeBot, CCBot, Google-Extended,
-# Applebot-Extended, Amazonbot, Bytespider and meta-externalagent, along with a
-# `Content-Signal: ai-train=no`. That is the exact opposite of the intent below.
-# If AI crawlers are being turned away, check the Cloudflare dashboard
-# (AI Crawl Control / robots.txt) before editing this file — the origin cannot
-# override an edge-injected block from here.
+# WARNING: this file is not necessarily what a crawler receives. Cloudflare's
+# "Managed robots.txt" setting (dash -> wattway.net -> AI Crawl Control ->
+# Signals) PREPENDS its own block when enabled, sending `Disallow: /` to GPTBot,
+# ClaudeBot, CCBot, Google-Extended, Applebot-Extended, Amazonbot, Bytespider and
+# meta-externalagent plus a `Content-Signal: ai-train=no` — the exact opposite of
+# the intent below, and silently, since the origin cannot override an
+# edge-injected block from here.
+#
+# It was found ON and was turned OFF on 2026-08-10. Do not re-enable it without
+# also rewriting this file, or the two will contradict each other. If AI crawlers
+# start being turned away again, check that setting FIRST.
 
 User-agent: *
 Allow: /
