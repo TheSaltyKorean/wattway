@@ -369,10 +369,12 @@ function HowItWorksGuide() {
             does not revisit that choice later.
           </li>
           <li>
-            <strong className="text-[var(--text)]">Charge to 80%, or further only if forced.</strong>{" "}
-            Each stop tops up to 80% by default. When the next gap demands more, the planner charges
-            higher and prices the taper honestly — energy above 80% arrives at roughly 40% of the
-            rate below it.
+            <strong className="text-[var(--text)]">Charge to 80% — or less, or more.</strong>{" "}
+            Intermediate stops top up to 80% by default. When the next gap demands more, the planner
+            charges higher and prices the taper honestly — energy above 80% arrives at roughly 40%
+            of the rate below it. The last stop goes the other way: once the destination is in
+            range it takes only the energy needed to get there, so it commonly leaves well under
+            80%.
           </li>
           <li>
             <strong className="text-[var(--text)]">Repeat to the destination.</strong> The result is
@@ -535,7 +537,7 @@ function FastChargingGuide() {
           especially in cars whose curves taper early. Peak kW is also a poor predictor of real
           charging speed on its own: a big efficient pack at 150 kW can add more miles per minute
           than a thirsty one at 250 kW. Miles added per minute is the number that matters, and it is
-          on every <A href="/ev">vehicle page</A>.
+          shown on every <A href="/ev">vehicle page</A>, alongside the raw time.
         </P>
       </section>
 
@@ -600,7 +602,7 @@ export const GUIDES: Guide[] = [
         { "@type": "HowToStep", name: "Price every candidate", text: "Give each station an effective cost per kWh from its published rate or its operator's reference rate, minus discounts from memberships you hold, and remove excluded networks." },
         { "@type": "HowToStep", name: "Track state of charge along the route", text: "Advance along the route from your actual starting battery level, considering only chargers reachable with the reserve intact." },
         { "@type": "HowToStep", name: "Score the far candidates on total cost", text: `Of the stations still reachable, keep only those in the far ${Math.round((1 - CANDIDATE_WINDOW) * 100)}% of that range so the plan stops as few times as possible, rank them on effective price per kWh plus penalties for detour distance and for stalls below 150 kW, and commit to the best without revisiting it.` },
-        { "@type": "HowToStep", name: "Charge to 80 percent", text: "Top up to 80% at each stop, charging higher only when the next gap requires it, because charging past 80% is disproportionately slow." },
+        { "@type": "HowToStep", name: "Charge to 80 percent", text: "Top up to 80% at intermediate stops, charging higher only when the next gap requires it, because charging past 80% is disproportionately slow; the final stop takes only the energy the destination needs and usually leaves below 80%." },
         { "@type": "HowToStep", name: "Repeat to the destination", text: "Continue until the destination is reachable, producing per-stop cost, energy, charge time, detour and arrival state of charge." },
       ],
     },

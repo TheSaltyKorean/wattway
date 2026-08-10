@@ -313,7 +313,8 @@ export default async function EVPage({ params }: { params: Promise<{ slug: strin
               <tr className="text-left text-xs uppercase tracking-wide text-[var(--text-muted)]">
                 <th scope="col" className="py-2 pr-4 font-medium">Stall power</th>
                 <th scope="col" className="py-2 pr-4 font-medium">Delivered to this car</th>
-                <th scope="col" className="py-2 font-medium">{windowPct} time</th>
+                <th scope="col" className="py-2 pr-4 font-medium">{windowPct} time</th>
+                <th scope="col" className="py-2 font-medium">Miles per minute</th>
               </tr>
             </thead>
             <tbody>
@@ -326,8 +327,11 @@ export default async function EVPage({ params }: { params: Promise<{ slug: strin
                     {Math.min(kw, ev.maxChargekW)} kW
                     {kw > ev.maxChargekW ? " (car-limited)" : ""}
                   </td>
-                  <td className="py-2 text-[var(--text)]">
+                  <td className="py-2 pr-4 text-[var(--text)]">
                     {duration(fastChargeMinutes(ev, kw))}
+                  </td>
+                  <td className="py-2 text-[var(--text)]">
+                    {(milesPerCharge / fastChargeMinutes(ev, kw)).toFixed(1)} mi/min
                   </td>
                 </tr>
               ))}
@@ -335,6 +339,8 @@ export default async function EVPage({ params }: { params: Promise<{ slug: strin
           </table>
         </div>
         <p className="mt-4 text-sm leading-relaxed text-[var(--text-muted)]">
+          Miles per minute is the figure to compare across cars: it folds charge rate and
+          efficiency together, so a big efficient pack at 150 kW can beat a thirsty one at 250 kW.{" "}
           <strong className="text-[var(--text)]">Read these as a best case.</strong> They assume the
           car averages about 85% of its nameplate power for the whole {windowPct} window, on a warm
           battery, at a stall running at full output. Real sessions are commonly 1.5-2× longer:

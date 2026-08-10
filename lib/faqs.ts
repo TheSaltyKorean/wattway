@@ -46,10 +46,11 @@ export function siteFAQs(): FAQ[] {
       a:
         "No and no. There is no sign-up, no login, no paywall and no account of any kind. The " +
         "planner runs entirely in your browser as a static site, with no application backend that " +
-        "stores anything about you. The one server-side piece is a counter: a successful plan " +
+        "stores anything about you. There is one server-side piece — a counter: a successful plan " +
         "sends an empty same-origin beacon to /api/plan so the operator can see how often the tool " +
-        "is used. It records no addresses, no route, no vehicle and no request body — just that a " +
-        "plan happened.",
+        "is used. That beacon has no body at all. Separately, aggregate analytics may record a " +
+        "handful of non-identifying fields about a plan; see \"What does WattWay do with my " +
+        "data?\" below for exactly which.",
     },
     {
       q: "How does WattWay choose where to stop?",
@@ -59,9 +60,10 @@ export function siteFAQs(): FAQ[] {
         `can reach and scores only the stations in the far ${farPct}% of that stretch — ` +
         "deliberately, so it stops as few times as possible — ranking them on effective price per " +
         "kWh after memberships, plus penalties for detour distance and for stalls under 150 kW, " +
-        "then commits to the best one without revisiting it. It charges to 80% by default because " +
-        "charging past that is disproportionately slow, going higher only when the next gap " +
-        "demands it. Two limits follow from this: a cheap charger sitting early in the reachable " +
+        "then commits to the best one without revisiting it. Intermediate stops charge to 80% by " +
+        "default because charging past that is disproportionately slow, going higher only when the " +
+        "next gap demands it; the last stop takes only what the destination actually needs, so it " +
+        "usually leaves well below 80%. Two limits follow from this: a cheap charger sitting early in the reachable " +
         `stretch (the near ${nearPct}%) is skipped rather than compared, and because whole stop ` +
         "sequences are never compared, this is a greedy heuristic rather than a global optimizer — " +
         "not guaranteed to find the theoretically cheapest plan, but it runs instantly and beats " +
@@ -109,10 +111,14 @@ export function siteFAQs(): FAQ[] {
         "It has nowhere to put it. Your car, memberships, excluded networks and custom specs live in " +
         "your browser's local storage. The origin and destination you type are sent to Google and " +
         "Open Charge Map to compute the route and find chargers, because that is the only way to " +
-        "answer the question, and they are not retained by WattWay afterwards. The only " +
-        "server-side component is an aggregate counter (an empty beacon to /api/plan on each " +
-        "successful plan) plus privacy-preserving page analytics; neither records addresses, " +
-        "routes, vehicles or anything identifying.",
+        "answer the question, and they are not retained by WattWay afterwards. Two things are " +
+        "measured. First, an empty beacon to /api/plan on each successful plan — no body, no " +
+        "content at all, just a count. Second, if analytics is configured for the deployment, a " +
+        "Google Analytics `plan_trip` event carrying five non-identifying fields: the number of " +
+        "stops, the trip distance rounded to the nearest mile, how many intermediate stops you " +
+        "added, the id of the vehicle profile you selected, and whether the plan came out " +
+        "incomplete. No origin, destination, waypoint, address or coordinate is ever sent to " +
+        "analytics, and nothing links an event to you.",
     },
     {
       q: "Can I exclude networks I don't want to use?",
@@ -134,7 +140,8 @@ export function siteFAQs(): FAQ[] {
         "Because the last 20% is where a DC fast charge stops being fast. The charge curve tapers " +
         "hard above 80%, so those final miles can take as long as the first 70% did. Adding another " +
         "stop is usually quicker overall than waiting out the taper. WattWay goes above 80% only " +
-        "when the next charger is far enough that it has to.",
+        "when the next charger is far enough that it has to — and it goes below, taking only what " +
+        "is needed, at a final stop that already puts the destination in range.",
     },
   ];
 }
