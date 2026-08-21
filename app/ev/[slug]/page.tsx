@@ -32,6 +32,12 @@ import {
   MIN_SOC,
   CHARGE_TAPER_FACTOR,
 } from "@/lib/chargingMath";
+import {
+  isIonnaEligible,
+  IONNA_BASE_DISCOUNT,
+  IONNA_BONUS_DISCOUNT,
+  IONNA_NETWORK,
+} from "@/lib/ionnaDiscount";
 
 // A collision would silently drop a vehicle from the static export, so fail the
 // build instead. evSlug() is derived from make/model/years, which a future
@@ -236,6 +242,45 @@ export default async function EVPage({ params }: { params: Promise<{ slug: strin
           .
         </p>
       </section>
+
+      {/* --- Hyundai/Genesis Ionna discount (eligible cars only) ----------- */}
+      {isIonnaEligible(ev) &&
+        (() => {
+          const ionna = networks.find((n) => n.name === IONNA_NETWORK);
+          if (!ionna) return null;
+          const rate10 = ionna.pricePerKwh * (1 - IONNA_BASE_DISCOUNT);
+          const rate20 = ionna.pricePerKwh * (1 - IONNA_BASE_DISCOUNT - IONNA_BONUS_DISCOUNT);
+          return (
+            <section className="border border-[var(--accent)]/40 bg-[var(--accent)]/5 rounded-xl p-5">
+              <h2 className="text-xl font-semibold text-[var(--text)]">
+                {ev.make} owners: discounted Ionna charging
+              </h2>
+              <p className="mt-2 text-sm leading-relaxed text-[var(--text-muted)]">
+                The {ev.make} {ev.model} is eligible for Ionna&apos;s owner discount:{" "}
+                <strong className="text-[var(--text)]">10% off every Ionna session</strong>{" "}
+                ongoing, plus an extra 10% bonus{" "}
+                <strong className="text-[var(--text)]">through September 30, 2026</strong> —{" "}
+                <strong className="text-[var(--text)]">20% off</strong> during the bonus window.
+                That takes Ionna&apos;s {perKwh(ionna.pricePerKwh)} down to{" "}
+                {perKwh(rate10)} (or {perKwh(rate20)} through Sep 30), so a {windowPct} charge on
+                this car runs {usd(fastChargeCost(ev, rate10))} instead of{" "}
+                {usd(fastChargeCost(ev, ionna.pricePerKwh))} — {usd(fastChargeCost(ev, rate20))}{" "}
+                during the bonus.
+              </p>
+              <p className="mt-3 text-xs leading-relaxed text-[var(--text-muted)]">
+                The discount applies only at Ionna stations, and only when you start the session
+                with {ev.make === "Genesis" ? "the Genesis app" : "MyHyundai"} Plug &amp; Charge or
+                in-app charging — a credit-card tap at the stall does not get it. Eligible models:
+                Hyundai IONIQ 5 (2022+), IONIQ 5 N (2025+), IONIQ 9 (2026+), Kona Electric (2025+);
+                Genesis GV60 and Electrified GV70 (2026+).{" "}
+                <Link href="/" className="text-[var(--accent)] hover:underline">
+                  Plan a trip
+                </Link>{" "}
+                with the Ionna discount toggle on to see it factored into your stops.
+              </p>
+            </section>
+          );
+        })()}
 
       {/* --- Cost by network ----------------------------------------------- */}
       <section>

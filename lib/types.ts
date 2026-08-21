@@ -97,4 +97,8 @@ export interface TripInput {
   // Networks the user has opted out of — stations on these are excluded from
   // planning (matched case-insensitively against the operator/name).
   excludedNetworks?: string[];
+  // Fraction (0..1) taken off Ionna station prices for the Hyundai/Genesis
+  // owner discount. Already gated in the UI on vehicle eligibility + opt-in +
+  // date, so the optimizer just applies it to Ionna stations. 0 = no discount.
+  ionnaDiscountFraction?: number;
 }

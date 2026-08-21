@@ -11,6 +11,7 @@ import MembershipSelector from "@/components/MembershipSelector";
 import NetworkExcluder from "@/components/NetworkExcluder";
 import ChargingPlan from "@/components/ChargingPlan";
 import { getMembershipById } from "@/lib/memberships";
+import { isIonnaEligible, ionnaDiscountRate, ionnaBonusActive } from "@/lib/ionnaDiscount";
 import { useBusyCursor } from "@/lib/useBusyCursor";
 import { track, countPlan } from "@/lib/analytics";
 
@@ -55,6 +56,9 @@ export default function Home() {
 
   const [membershipIds, setMembershipIds] = useState<string[]>([]);
   const [excludedNetworks, setExcludedNetworks] = useState<string[]>([]);
+  // Opt-in for the Hyundai/Genesis Ionna Plug & Charge discount. Only applied
+  // when the selected car is also eligible (see ionnaEligible below).
+  const [ionnaDiscount, setIonnaDiscount] = useState(false);
 
   // Remember the user's car and memberships across visits.
   // Storage can throw in restricted contexts — persistence is best-effort.
@@ -103,6 +107,7 @@ export default function Home() {
         const nets = JSON.parse(savedExcluded);
         if (Array.isArray(nets)) setExcludedNetworks(nets.filter((n) => typeof n === "string"));
       }
+      if (localStorage.getItem("wattway.ionnaDiscount") === "1") setIonnaDiscount(true);
       const savedPanel = localStorage.getItem("wattway.panel");
       if (savedPanel) {
         const p = JSON.parse(savedPanel);
@@ -140,6 +145,11 @@ export default function Home() {
   const handleExcludedNetworksChange = useCallback((nets: string[]) => {
     setExcludedNetworks(nets);
     try { localStorage.setItem("wattway.excludedNetworks", JSON.stringify(nets)); } catch { /* best-effort */ }
+  }, []);
+
+  const handleIonnaDiscountChange = useCallback((on: boolean) => {
+    setIonnaDiscount(on);
+    try { localStorage.setItem("wattway.ionnaDiscount", on ? "1" : "0"); } catch { /* best-effort */ }
   }, []);
   const [startingSoC, setStartingSoC] = useState(80);
   const [arrivalSoC, setArrivalSoC] = useState(10);
@@ -222,6 +232,8 @@ export default function Home() {
         avoidFerries,
         avoidTolls,
         excludedNetworks,
+        ionnaDiscountFraction:
+          ionnaDiscount && isIonnaEligible(ev) ? ionnaDiscountRate() : 0,
       });
       setPlan(result);
       setPlannedDestAddress(destination.address);
@@ -239,6 +251,9 @@ export default function Home() {
         via_count: vias.filter((v) => v.wp).length,
         ev_id: ev.id,
         plan_incomplete: result.planIncomplete,
+        // Ionna discount applied this plan: 0 = off/ineligible, 0.1 or 0.2 = rate.
+        // Measures adoption of the Hyundai/Genesis discount feature; non-identifying.
+        ionna_discount: ionnaDiscount && isIonnaEligible(ev) ? ionnaDiscountRate() : 0,
       });
     } catch (e) {
       setError(e instanceof Error ? e.message : "Something went wrong");
@@ -246,7 +261,7 @@ export default function Home() {
     } finally {
       setLoading(false);
     }
-  }, [origin, destination, vias, ev, startingSoC, arrivalSoC, membershipIds, avoidFerries, avoidTolls, excludedNetworks]);
+  }, [origin, destination, vias, ev, startingSoC, arrivalSoC, membershipIds, avoidFerries, avoidTolls, excludedNetworks, ionnaDiscount]);
 
   // A custom vehicle with a zero/blank battery or range would make the route
   // math divide by zero, so require positive specs before planning.
@@ -352,6 +367,25 @@ export default function Home() {
           />
           <EVSelector value={ev} onChange={handleEVChange} />
           <MembershipSelector selected={membershipIds} onChange={handleMembershipsChange} />
+          {isIonnaEligible(ev) && (
+            <label className="flex items-start gap-2.5 cursor-pointer select-none">
+              <input
+                type="checkbox"
+                checked={ionnaDiscount}
+                onChange={(e) => handleIonnaDiscountChange(e.target.checked)}
+                className="mt-0.5 accent-[var(--accent)] w-4 h-4 shrink-0"
+              />
+              <span className="text-xs leading-relaxed text-[var(--text-muted)]">
+                <span className="font-medium text-[var(--text)]">
+                  Ionna discount — {ionnaBonusActive() ? "20%" : "10%"} off
+                </span>{" "}
+                on Ionna stations for eligible Hyundai/Genesis owners.
+                {ionnaBonusActive() && " Includes the +10% bonus through Sep 30, 2026."}{" "}
+                Requires MyHyundai/Genesis Plug &amp; Charge or in-app charging — not
+                a credit-card tap at the stall.
+              </span>
+            </label>
+          )}
           <NetworkExcluder excluded={excludedNetworks} onChange={handleExcludedNetworksChange} />
 
           <button

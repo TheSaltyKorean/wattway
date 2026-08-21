@@ -3,6 +3,12 @@ import { GUIDE_META, type GuideMeta } from "./guideMeta";
 import { MEMBERSHIP_PLANS } from "./memberships";
 import { EV_DATABASE } from "./evDatabase";
 import {
+  isIonnaEligible,
+  IONNA_BASE_DISCOUNT,
+  IONNA_BONUS_DISCOUNT,
+  IONNA_NETWORK,
+} from "./ionnaDiscount";
+import {
   chargingNetworks,
   evName,
   evPath,
@@ -19,6 +25,7 @@ import {
   stopsForTrip,
   enRouteEnergyCost,
   energyCostForMiles,
+  fastChargeCost,
   CANDIDATE_WINDOW,
 } from "./chargingMath";
 
@@ -588,7 +595,225 @@ function FastChargingGuide() {
   );
 }
 
+function IonnaDiscountGuide() {
+  const networks = chargingNetworks();
+  const ionna = networks.find((n) => n.name === IONNA_NETWORK);
+  const base = ionna?.pricePerKwh ?? 0.39;
+  const r10 = base * (1 - IONNA_BASE_DISCOUNT);
+  const r20 = base * (1 - IONNA_BASE_DISCOUNT - IONNA_BONUS_DISCOUNT);
+
+  type EV = (typeof EV_DATABASE)[number];
+  const familyOf = (ev: EV): string => {
+    if (/IONIQ 5 N/.test(ev.model)) return "IONIQ 5 N";
+    if (/IONIQ 5/.test(ev.model)) return "IONIQ 5";
+    if (/IONIQ 9/.test(ev.model)) return "IONIQ 9";
+    if (/Kona/.test(ev.model)) return "Kona Electric";
+    return ev.model;
+  };
+  const families = ["IONIQ 5", "IONIQ 5 N", "IONIQ 9", "Kona Electric"];
+  const eligible = EV_DATABASE.filter(isIonnaEligible);
+  // One representative per family: the largest-battery eligible trim.
+  const reps = families
+    .map((f) => eligible.filter((e) => familyOf(e) === f).sort((a, b) => b.batteryKwh - a.batteryKwh)[0])
+    .filter((e): e is EV => Boolean(e));
+  const eligibleCount = eligible.length;
+
+  // A concrete trip comparison for the headline saving.
+  const hero = reps.find((e) => familyOf(e) === "IONIQ 5") ?? reps[0];
+  const tripFull = enRouteEnergyCost(hero, 1000, base);
+  const tripDisc = enRouteEnergyCost(hero, 1000, r20);
+
+  return (
+    <>
+      <section className="space-y-3">
+        <H2 id="short-answer">The short version</H2>
+        <P>
+          If you own an eligible Hyundai or Genesis EV, you get{" "}
+          <strong className="text-[var(--text)]">10% off every Ionna fast-charging session</strong>,
+          ongoing — and an extra 10% bonus{" "}
+          <strong className="text-[var(--text)]">through September 30, 2026</strong>, for{" "}
+          <strong className="text-[var(--text)]">20% off</strong> right now. That drops Ionna&apos;s{" "}
+          {perKwh(base)} to {perKwh(r20)} during the bonus ({perKwh(r10)} after it). On a
+          1,000-mile road trip in a {hero.make} {familyOf(hero)}, the en-route charging you buy at
+          Ionna falls from about {usd(tripFull)} to {usd(tripDisc)} — and there is nothing to sign
+          up for beyond charging through the app.
+        </P>
+      </section>
+
+      <section className="space-y-3">
+        <H2 id="savings">How much you save, by model</H2>
+        <P>
+          The discount is a straight percentage off whatever the session would cost, so the dollar
+          saving scales with your battery. A 10-80% charge at Ionna, for the largest-battery trim of
+          each eligible family:
+        </P>
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm border-collapse">
+            <caption className="sr-only">Ionna 10-80% charge cost by eligible model, with the discount</caption>
+            <thead>
+              <tr className="text-left text-xs uppercase tracking-wide text-[var(--text-muted)]">
+                <th scope="col" className="py-2 pr-4 font-medium">Model</th>
+                <th scope="col" className="py-2 pr-4 font-medium">Full price</th>
+                <th scope="col" className="py-2 pr-4 font-medium">10% off</th>
+                <th scope="col" className="py-2 pr-4 font-medium">20% off (now)</th>
+                <th scope="col" className="py-2 font-medium">You save (20%)</th>
+              </tr>
+            </thead>
+            <tbody>
+              {reps.map((ev) => {
+                const full = fastChargeCost(ev, base);
+                return (
+                  <tr key={ev.id} className="border-t border-[var(--border)]">
+                    <th scope="row" className="py-2 pr-4 font-normal text-left">
+                      <A href={evPath(ev)}>{ev.make} {familyOf(ev)}</A>
+                    </th>
+                    <td className="py-2 pr-4 text-[var(--text-muted)]">{usd(full)}</td>
+                    <td className="py-2 pr-4 text-[var(--text)]">{usd(fastChargeCost(ev, r10))}</td>
+                    <td className="py-2 pr-4 text-[var(--text)]">{usd(fastChargeCost(ev, r20))}</td>
+                    <td className="py-2 text-[var(--accent)]">{usd(full - fastChargeCost(ev, r20))}</td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+        <P>
+          Every eligible trim &mdash; {eligibleCount} vehicle profiles in all &mdash; has its own
+          page with the full cost breakdown. The saving per charge looks small, but it repeats at
+          every stop: on a long trip that stops four or five times, it adds up quickly, and it
+          stacks on top of the fact that Ionna is already one of the cheaper national networks.
+        </P>
+      </section>
+
+      <section className="space-y-3">
+        <H2 id="eligible">Which vehicles qualify</H2>
+        <P>
+          Hyundai Motor America enabled the discount for these models. More are expected as in-app
+          charging rolls out to the rest of the lineup.
+        </P>
+        <ul className="text-sm leading-relaxed text-[var(--text-muted)] space-y-1 list-disc pl-5">
+          <li><strong className="text-[var(--text)]">Hyundai IONIQ 5</strong> — 2022 and newer (all trims, including SE, SEL, Limited, XRT)</li>
+          <li><strong className="text-[var(--text)]">Hyundai IONIQ 5 N</strong> — 2025 and newer</li>
+          <li><strong className="text-[var(--text)]">Hyundai IONIQ 9</strong> — 2026 and newer</li>
+          <li><strong className="text-[var(--text)]">Hyundai Kona Electric</strong> — 2025 and newer</li>
+          <li><strong className="text-[var(--text)]">Genesis GV60</strong> and <strong className="text-[var(--text)]">Electrified GV70</strong> — 2026 and newer</li>
+        </ul>
+        <P>
+          Notable omission: the <strong className="text-[var(--text)]">IONIQ 6 is not on the list</strong>{" "}
+          as of launch, and neither is the earlier Kona Electric (2024 and older) or the Electrified
+          G80. If your car isn&apos;t covered yet, it may be added later as Hyundai expands in-app
+          charging.
+        </P>
+      </section>
+
+      <section className="space-y-3">
+        <H2 id="how">How to actually get the discount</H2>
+        <P>
+          This is the part that trips people up:{" "}
+          <strong className="text-[var(--text)]">the discount only applies through the app.</strong>{" "}
+          You have to start the session with Hyundai In-App Charging or Plug &amp; Charge in the
+          MyHyundai with Bluelink app (the Genesis app for Genesis vehicles). If you tap a credit
+          card at the stall, you pay full price &mdash; no discount.
+        </P>
+        <ol className="text-sm leading-relaxed text-[var(--text-muted)] space-y-2 list-decimal pl-5">
+          <li>Set up Plug &amp; Charge or a payment method in the MyHyundai (or Genesis) app.</li>
+          <li>Pull up to any Ionna &ldquo;Rechargery&rdquo; station.</li>
+          <li>Start the session from the app, or just plug in if Plug &amp; Charge is enabled.</li>
+          <li>The 10% (or 20% through Sept 30) is applied automatically to that session.</li>
+        </ol>
+      </section>
+
+      <section className="space-y-3">
+        <H2 id="deadline">The September 30 deadline</H2>
+        <P>
+          The base 10% is described as ongoing. The extra 10% bonus &mdash; the half that makes it
+          20% &mdash; runs only <strong className="text-[var(--text)]">through September 30, 2026</strong>.
+          After that it reverts to 10%. If you have a road trip in range of Ionna stations before
+          then, that is the window where the discount is at its biggest.
+        </P>
+      </section>
+
+      <section className="space-y-3">
+        <H2 id="worth-it">Is Ionna worth going out of your way for?</H2>
+        <P>
+          At {perKwh(r20)} with the current discount, an eligible Hyundai charges at Ionna for less
+          than almost every national network&apos;s standard rate &mdash; below Electrify America,
+          EVgo, ChargePoint and Shell Recharge, and competitive with the cheapest regional and
+          automaker networks. See the full{" "}
+          <A href="/charging-networks">network price comparison</A> and the{" "}
+          <A href="/charging-networks/ionna">Ionna network page</A>. Ionna&apos;s footprint is still
+          growing, so it won&apos;t be on every route yet &mdash; but where it is, the discounted
+          price is hard to beat.
+        </P>
+      </section>
+
+      <section className="space-y-3">
+        <H2 id="plan">Factor it into your trip</H2>
+        <P>
+          WattWay applies this discount for you. Pick an eligible Hyundai or Genesis, turn on the
+          Ionna discount option, and the planner prices Ionna stops at your discounted rate &mdash;
+          so it chooses them when they genuinely save you money.{" "}
+          <A href="/">Plan a trip</A> to see it in your own numbers.
+        </P>
+      </section>
+    </>
+  );
+}
+
 export const GUIDES: Guide[] = [
+  {
+    ...meta("hyundai-genesis-ionna-discount"),
+    intro: (
+      <p>
+        Hyundai and Genesis EV owners now get a real discount at Ionna fast chargers &mdash; 10%
+        ongoing, and 20% through September 30, 2026. Here is who qualifies, exactly how much it
+        saves per charge for your model, how to switch it on, and how to make the most of it before
+        the bonus ends.
+      </p>
+    ),
+    body: <IonnaDiscountGuide />,
+    schema: {
+      "@type": "FAQPage",
+      mainEntity: [
+        {
+          "@type": "Question",
+          name: "How much is the Hyundai Ionna discount?",
+          acceptedAnswer: {
+            "@type": "Answer",
+            text:
+              "Eligible Hyundai and Genesis EVs get 10% off every Ionna fast-charging session, plus an additional 10% bonus through September 30, 2026 — 20% off during the bonus window, reverting to 10% afterward. It applies only at Ionna stations and only when charging is started via Hyundai/Genesis in-app charging or Plug & Charge.",
+          },
+        },
+        {
+          "@type": "Question",
+          name: "Which Hyundai and Genesis models qualify for the Ionna discount?",
+          acceptedAnswer: {
+            "@type": "Answer",
+            text:
+              "Hyundai IONIQ 5 (2022+), IONIQ 5 N (2025+), IONIQ 9 (2026+) and Kona Electric (2025+); Genesis GV60 and Electrified GV70 (2026+). The IONIQ 6 is not included at launch. More models are expected as in-app charging expands.",
+          },
+        },
+        {
+          "@type": "Question",
+          name: "How do I get the Hyundai Ionna discount?",
+          acceptedAnswer: {
+            "@type": "Answer",
+            text:
+              "Start the charging session using Hyundai In-App Charging or Plug & Charge in the MyHyundai with Bluelink app (or the Genesis app). Paying with a credit card at the stall does not apply the discount.",
+          },
+        },
+        {
+          "@type": "Question",
+          name: "When does the 20% Ionna discount end?",
+          acceptedAnswer: {
+            "@type": "Answer",
+            text:
+              "The extra 10% bonus runs through September 30, 2026, after which the discount reverts to the ongoing 10%.",
+          },
+        },
+      ],
+    },
+  },
   {
     ...meta("ev-road-trip-charging-cost"),
     intro: (

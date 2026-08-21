@@ -24,6 +24,11 @@ import {
   CHARGE_TO_SOC,
   MIN_SOC,
 } from "@/lib/chargingMath";
+import {
+  IONNA_NETWORK,
+  IONNA_BASE_DISCOUNT,
+  IONNA_BONUS_DISCOUNT,
+} from "@/lib/ionnaDiscount";
 
 export const dynamicParams = false;
 
@@ -211,6 +216,29 @@ export default async function NetworkPage({
           ))}
         </div>
       </section>
+
+      {network.name === IONNA_NETWORK && (
+        <section className="border border-[var(--accent)]/40 bg-[var(--accent)]/5 rounded-xl p-5">
+          <h2 className="text-xl font-semibold text-[var(--text)]">
+            Hyundai &amp; Genesis owners: 10-20% off Ionna
+          </h2>
+          <p className="mt-2 text-sm leading-relaxed text-[var(--text-muted)]">
+            Eligible Hyundai and Genesis EVs get{" "}
+            <strong className="text-[var(--text)]">10% off every Ionna session</strong> ongoing, plus
+            a 10% bonus <strong className="text-[var(--text)]">through September 30, 2026</strong> —{" "}
+            <strong className="text-[var(--text)]">20% off</strong> right now, dropping Ionna&apos;s{" "}
+            {perKwh(network.pricePerKwh)} to{" "}
+            {perKwh(network.pricePerKwh * (1 - IONNA_BASE_DISCOUNT - IONNA_BONUS_DISCOUNT))} (or{" "}
+            {perKwh(network.pricePerKwh * (1 - IONNA_BASE_DISCOUNT))} after the bonus). It applies
+            only via Plug &amp; Charge / in-app charging, not a credit-card tap. See the full rules,
+            eligible models and per-car savings in the{" "}
+            <Link href="/guides/hyundai-genesis-ionna-discount" className="text-[var(--accent)] hover:underline">
+              Hyundai &amp; Genesis Ionna discount guide
+            </Link>
+            .
+          </p>
+        </section>
+      )}
 
       <section>
         <h2 className="text-xl font-semibold text-[var(--text)]">

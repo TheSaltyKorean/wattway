@@ -18,6 +18,7 @@ import {
   ABOVE_80_TAPER_FACTOR,
   CANDIDATE_WINDOW,
 } from "./chargingMath";
+import { isIonnaStation } from "./ionnaDiscount";
 
 const ROUTES_API_URL = "https://routes.googleapis.com/directions/v2:computeRoutes";
 const OCM_BASE = "https://api.openchargemap.io/v3";
@@ -190,7 +191,10 @@ export async function fetchChargersAlongRoute(
   ocmApiKey?: string,
   // Minimum DC power to consider. Defaults to 50 kW, but a low-power EV (e.g. a
   // 40 kW e-Golf) shouldn't have same-speed chargers filtered out.
-  minPowerKw: number = 50
+  minPowerKw: number = 50,
+  // Fraction (0..1) taken off Ionna station prices for an eligible Hyundai/
+  // Genesis owner using Plug & Charge; 0 disables it.
+  ionnaDiscountFraction: number = 0
 ): Promise<ChargerStation[]> {
   // Split the route into segments of at most SEGMENT_MILES (interpolating cut
   // points — vertex snapping can leave gaps), then query each segment's
@@ -329,6 +333,12 @@ export async function fetchChargersAlongRoute(
         effectivePrice = Math.max(0, effectivePrice - plan.discountPerKwh);
         break;
       }
+    }
+    // Hyundai/Genesis Plug & Charge discount at Ionna — a percentage off whatever
+    // the session would otherwise cost (published rate or fallback). Already
+    // gated on vehicle eligibility + opt-in + date before it reaches here.
+    if (ionnaDiscountFraction > 0 && isIonnaStation(network, poi.AddressInfo.Title ?? "")) {
+      effectivePrice = Math.max(0, effectivePrice * (1 - ionnaDiscountFraction));
     }
 
     stations.push({
@@ -665,7 +675,8 @@ export async function planTrip(input: TripInput): Promise<TripPlan> {
     input.networkPrices,
     input.memberships ?? [],
     ocmKey,
-    Math.min(50, input.ev.maxChargekW)
+    Math.min(50, input.ev.maxChargekW),
+    input.ionnaDiscountFraction ?? 0
   );
   // Only plan leg-by-leg when a via actually carries a per-stop setting; plain
   // via stops keep the single-pass behavior (identical results).

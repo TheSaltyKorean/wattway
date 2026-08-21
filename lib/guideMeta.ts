@@ -14,6 +14,15 @@ export interface GuideMeta {
 
 export const GUIDE_META: GuideMeta[] = [
   {
+    slug: "hyundai-genesis-ionna-discount",
+    title: "Hyundai & Genesis Ionna Discount: 20% Off Charging Through Sept 30, 2026",
+    description:
+      "Eligible Hyundai and Genesis EV owners get 10% off every Ionna fast-charging session — 20% " +
+      "through September 30, 2026. Who qualifies (IONIQ 5, IONIQ 5 N, IONIQ 9, Kona Electric, " +
+      "Genesis GV60/GV70), exactly how much you save per charge by model, and how to activate it " +
+      "with Plug & Charge.",
+  },
+  {
     slug: "ev-road-trip-charging-cost",
     title: "How Much Does It Cost to Charge an EV on a Road Trip?",
     description:
