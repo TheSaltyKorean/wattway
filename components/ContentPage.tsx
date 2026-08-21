@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { SITE_URL } from "@/lib/seo";
+import SiteHeader from "@/components/SiteHeader";
 
 export interface Crumb {
   name: string;
@@ -40,14 +41,6 @@ export function breadcrumbSchema(crumbs: Crumb[]) {
   };
 }
 
-const NAV = [
-  { href: "/", label: "Trip planner" },
-  { href: "/ev", label: "EVs" },
-  { href: "/charging-networks", label: "Charging networks" },
-  { href: "/guides", label: "Guides" },
-  { href: "/faq", label: "FAQ" },
-];
-
 /**
  * Shell for every static content page: site nav, breadcrumbs, and the footer
  * disclaimer. Deliberately a server component with no client JS — these pages
@@ -70,24 +63,7 @@ export default function ContentPage({
       <JsonLd data={breadcrumbSchema([{ name: "Home", href: "/" }, ...crumbs])} />
 
       <div className="min-h-screen flex flex-col">
-        <header className="border-b border-[var(--border)] bg-[var(--surface)]">
-          <div className="mx-auto max-w-4xl px-5 py-3 flex flex-wrap items-center gap-x-5 gap-y-2">
-            <Link href="/" className="flex items-center gap-2 font-bold text-[var(--text)]">
-              <span aria-hidden="true">⚡</span> WattWay
-            </Link>
-            <nav aria-label="Main" className="flex flex-wrap gap-x-4 gap-y-1 text-sm">
-              {NAV.map((item) => (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  className="text-[var(--text-muted)] hover:text-[var(--accent)] transition-colors"
-                >
-                  {item.label}
-                </Link>
-              ))}
-            </nav>
-          </div>
-        </header>
+        <SiteHeader />
 
         <main className="mx-auto w-full max-w-4xl flex-1 px-5 py-8">
           <nav aria-label="Breadcrumb" className="mb-6 text-xs text-[var(--text-muted)]">
