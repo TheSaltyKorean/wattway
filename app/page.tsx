@@ -556,7 +556,7 @@ export default function Home() {
         {panel}
         {/* Map: on mobile a fixed slice of the viewport at the top so it's
             always clearly visible; on desktop it fills the remaining width. */}
-        <div className="order-1 md:order-2 relative w-full h-[42vh] shrink-0 md:h-auto md:flex-1 md:shrink border-b md:border-b-0 border-[var(--border)]">
+        <div className="order-1 md:order-2 relative w-full h-[30vh] shrink-0 md:h-auto md:flex-1 md:shrink border-b md:border-b-0 border-[var(--border)]">
           <MapView plan={plan} />
         </div>
       </div>
