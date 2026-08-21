@@ -14,6 +14,7 @@ import { getMembershipById } from "@/lib/memberships";
 import { isIonnaEligible, ionnaDiscountRate, ionnaBonusActive } from "@/lib/ionnaDiscount";
 import { useBusyCursor } from "@/lib/useBusyCursor";
 import { track, countPlan } from "@/lib/analytics";
+import SiteHeader from "@/components/SiteHeader";
 
 const MapView = dynamic(() => import("@/components/MapView"), { ssr: false });
 
@@ -175,6 +176,16 @@ export default function Home() {
   // Panel docking: right (default), left, or floating with a saved position
   const [panelMode, setPanelMode] = useState<PanelMode>("right");
   const [panelPos, setPanelPos] = useState({ x: 80, y: 60 });
+  // On phones the dock/float modes don't apply — the panel and map stack
+  // vertically instead (see the layout below), so track a mobile breakpoint.
+  const [isMobile, setIsMobile] = useState(false);
+  useEffect(() => {
+    const mq = window.matchMedia("(max-width: 767px)");
+    const sync = () => setIsMobile(mq.matches);
+    sync();
+    mq.addEventListener("change", sync);
+    return () => mq.removeEventListener("change", sync);
+  }, []);
   const panelPosRef = useRef(panelPos);
   panelPosRef.current = panelPos;
 
@@ -272,35 +283,41 @@ export default function Home() {
   // Single persistent panel element moved via CSS (order / fixed positioning)
   // so TripForm never remounts — remounting would blank the uncontrolled
   // Google autocomplete widgets even though the trip state survives.
-  const panelClass =
-    panelMode === "floating"
-      ? "fixed z-20 w-[24rem] max-h-[88vh] flex flex-col bg-[var(--surface)] border border-[var(--border)] rounded-2xl shadow-2xl overflow-hidden"
-      : `w-full max-w-sm flex flex-col bg-[var(--surface)] overflow-hidden ${panelMode === "left" ? "order-1 border-r" : "order-3 border-l"} border-[var(--border)]`;
+  // Floating is a desktop-only power feature; on phones the panel always stacks
+  // under the map (see below), so coerce the effective mode to a docked one.
+  const floating = panelMode === "floating" && !isMobile;
+  const panelClass = floating
+    ? "fixed z-20 w-[24rem] max-h-[88vh] flex flex-col bg-[var(--surface)] border border-[var(--border)] rounded-2xl shadow-2xl overflow-hidden"
+    : [
+        // Mobile: full-width, stacked below the map (order-2), takes the
+        // remaining height and scrolls. Desktop: fixed-width docked column.
+        "w-full md:max-w-sm flex flex-col bg-[var(--surface)] overflow-hidden",
+        "order-2 flex-1 min-h-0 md:flex-none md:min-h-0",
+        "border-t md:border-t-0 border-[var(--border)]",
+        panelMode === "left" ? "md:order-1 md:border-r" : "md:order-3 md:border-l",
+      ].join(" ");
 
   const panel = (
     <div
       className={panelClass}
-      style={panelMode === "floating" ? { left: panelPos.x, top: panelPos.y } : undefined}
+      style={floating ? { left: panelPos.x, top: panelPos.y } : undefined}
     >
       {/* Header — drag handle when floating */}
       <div
-        className={`px-5 py-4 border-b border-[var(--border)] shrink-0 ${panelMode === "floating" ? "cursor-move select-none" : ""}`}
-        onPointerDown={panelMode === "floating" ? startPanelDrag : undefined}
+        className={`px-5 py-4 border-b border-[var(--border)] shrink-0 ${floating ? "cursor-move select-none" : ""}`}
+        onPointerDown={floating ? startPanelDrag : undefined}
       >
           <div className="flex items-center gap-2">
-            <span className="text-xl">⚡</span>
-            {/* The visible mark is the brand; the appended text spells out what
-                the tool is for screen readers and for search/AI crawlers, which
-                otherwise see an <h1> containing only a made-up word. It restates
-                the subtitle directly below it, so nothing is hidden that a
-                sighted visitor can't also read. */}
+            {/* The brand lives in the top menubar; this is the planner page's
+                own H1. The visible text is descriptive and the sr-only tail
+                keeps the keyword-rich phrasing for search/AI crawlers. */}
             <h1 className="text-lg font-bold text-[var(--text)]">
-              WattWay
+              Plan your EV road trip
               <span className="sr-only">
-                {" "}— cost-optimized EV road trip charging planner
+                {" "}— WattWay cost-optimized charging planner
               </span>
             </h1>
-            <div className="ml-auto flex items-center gap-1">
+            <div className="ml-auto hidden md:flex items-center gap-1">
               {([["left", "◧", "Dock left"], ["floating", "❐", "Float (drag by header)"], ["right", "◨", "Dock right"]] as const).map(([mode, icon, label]) => (
                 <button
                   key={mode}
@@ -533,10 +550,15 @@ export default function Home() {
   );
 
   return (
-    <div className="flex h-screen overflow-hidden relative">
-      {panel}
-      <div className="order-2 flex-1 relative">
-        <MapView plan={plan} />
+    <div className="flex flex-col h-[100dvh] overflow-hidden">
+      <SiteHeader />
+      <div className="flex-1 min-h-0 flex flex-col md:flex-row overflow-hidden relative">
+        {panel}
+        {/* Map: on mobile a fixed slice of the viewport at the top so it's
+            always clearly visible; on desktop it fills the remaining width. */}
+        <div className="order-1 md:order-2 relative w-full h-[42vh] shrink-0 md:h-auto md:flex-1 md:shrink border-b md:border-b-0 border-[var(--border)]">
+          <MapView plan={plan} />
+        </div>
       </div>
     </div>
   );
