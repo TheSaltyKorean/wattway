@@ -27,6 +27,17 @@ export interface ViaStop {
 
 type PanelMode = "left" | "right" | "floating";
 
+/** "Austin, TX, USA" -> "Austin, TX". Keeps the collapsed route summary on one
+ *  line at phone widths; falls back to the full string if there's nothing to
+ *  trim. The country tail is the only reliably droppable part — street
+ *  addresses keep their leading components. */
+function shortAddress(address: string | undefined): string {
+  if (!address) return "";
+  const parts = address.split(",").map((p) => p.trim()).filter(Boolean);
+  if (parts.length <= 2) return address;
+  return parts.slice(-3, -1).join(", ");
+}
+
 // One-time migration for saved car ids whose meaning changed when the DB was
 // split by generation. Legacy ids that were labeled as the latest model year in
 // the old release are remapped to the current-generation profile so returning
@@ -169,6 +180,13 @@ export default function Home() {
   const [plannedDestAddress, setPlannedDestAddress] = useState<string | undefined>(undefined);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Once a plan comes back on a phone, the trip form collapses to a one-line
+  // route summary so the results own the panel; tapping it reopens the whole
+  // form. Desktop never collapses — the docked column has room for both.
+  // Collapsing is CSS-only (`hidden`): unmounting TripForm would blank the
+  // uncontrolled Google autocomplete widgets, same reason the panel never
+  // remounts on a dock change.
+  const [formCollapsed, setFormCollapsed] = useState(false);
 
   // Wait cursor while a route is being calculated
   useBusyCursor(loading);
@@ -248,6 +266,7 @@ export default function Home() {
       });
       setPlan(result);
       setPlannedDestAddress(destination.address);
+      if (isMobile) setFormCollapsed(true);
       // Real "plans planned" signal for the usage report. Before this, plans
       // were inferred from Routes API call counts, which double-count retries
       // and miss nothing-but-also-tell-nothing about failures. Aggregate,
@@ -272,7 +291,7 @@ export default function Home() {
     } finally {
       setLoading(false);
     }
-  }, [origin, destination, vias, ev, startingSoC, arrivalSoC, membershipIds, avoidFerries, avoidTolls, excludedNetworks, ionnaDiscount]);
+  }, [origin, destination, vias, ev, startingSoC, arrivalSoC, membershipIds, avoidFerries, avoidTolls, excludedNetworks, ionnaDiscount, isMobile]);
 
   // A custom vehicle with a zero/blank battery or range would make the route
   // math divide by zero, so require positive specs before planning.
@@ -304,14 +323,14 @@ export default function Home() {
     >
       {/* Header — drag handle when floating */}
       <div
-        className={`px-5 py-4 border-b border-[var(--border)] shrink-0 ${floating ? "cursor-move select-none" : ""}`}
+        className={`px-5 py-2.5 md:py-4 border-b border-[var(--border)] shrink-0 ${floating ? "cursor-move select-none" : ""}`}
         onPointerDown={floating ? startPanelDrag : undefined}
       >
           <div className="flex items-center gap-2">
             {/* The brand lives in the top menubar; this is the planner page's
                 own H1. The visible text is descriptive and the sr-only tail
                 keeps the keyword-rich phrasing for search/AI crawlers. */}
-            <h1 className="text-lg font-bold text-[var(--text)]">
+            <h1 className="text-base md:text-lg font-bold text-[var(--text)]">
               Plan your EV road trip
               <span className="sr-only">
                 {" "}— WattWay cost-optimized charging planner
@@ -343,23 +362,40 @@ export default function Home() {
               TheSaltyKorean
             </a>
           </p>
-          <a
-            href="https://venmo.com/u/TheSaltyKorean"
-            target="_blank"
-            rel="noopener noreferrer"
-            onPointerDown={(e) => e.stopPropagation()}
-            className="neon-donate mt-3 flex items-center justify-center gap-2 w-full py-2 rounded-lg text-sm font-semibold text-white hover:opacity-90 active:scale-[0.98] transition-all"
-          >
-            <svg viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4" aria-hidden="true">
-              <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" />
-            </svg>
-            Donate via Venmo
-          </a>
+          {/* Donate moved to the top menubar (components/SiteHeader) — as a
+              full-width block here it pushed the form below the fold on a
+              phone, and it is now visible on every page instead of just this
+              one. */}
         </div>
 
         {/* Form + results scroll together */}
         <div className="flex-1 overflow-y-auto">
         <div className="px-5 py-4 space-y-5">
+          {/* Collapsed route summary — the expanded card's twin (same border,
+              radius and origin marker), so it reads as the card folding shut
+              rather than a different screen. */}
+          {formCollapsed && (
+            <button
+              onClick={() => setFormCollapsed(false)}
+              aria-expanded={false}
+              className="flex items-center gap-2.5 w-full h-12 px-3 border border-[var(--border)] rounded-xl bg-[var(--surface-2)] text-left hover:border-[var(--text-muted)] transition-colors"
+            >
+              <span className="w-2.5 h-2.5 shrink-0 rounded-full border-2 border-[var(--accent)]" aria-hidden="true" />
+              <span className="flex-1 min-w-0 truncate text-sm font-semibold text-[var(--text)]">
+                {shortAddress(origin?.address)} → {shortAddress(destination?.address)}
+              </span>
+              <span className="shrink-0 flex items-center gap-1 text-xs text-[var(--text-muted)]">
+                Edit
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-3.5 h-3.5" aria-hidden="true">
+                  <polyline points="6 9 12 15 18 9" />
+                </svg>
+              </span>
+            </button>
+          )}
+
+          {/* CSS-hidden, never unmounted: the Google autocomplete widgets are
+              uncontrolled and lose their text if React drops them. */}
+          <div className={`space-y-5 ${formCollapsed ? "hidden" : ""}`}>
           <TripForm
             origin={origin}
             destination={destination}
@@ -405,6 +441,11 @@ export default function Home() {
           )}
           <NetworkExcluder excluded={excludedNetworks} onChange={handleExcludedNetworksChange} />
 
+          </div>
+
+          {/* Pinned on a phone so the primary action never scrolls away; a
+              normal in-flow button on desktop, where the column is short. */}
+          <div className="sticky bottom-0 -mx-5 px-5 py-3 bg-[var(--surface)] border-t border-[var(--border)] md:static md:mx-0 md:px-0 md:py-0 md:bg-transparent md:border-t-0">
           <button
             onClick={handlePlan}
             disabled={!canPlan}
@@ -417,16 +458,19 @@ export default function Home() {
                 <span className="w-4 h-4 border-2 border-black/30 border-t-black rounded-full animate-spin" />
                 Planning route…
               </span>
+            ) : plan ? (
+              "⚡ Re-plan trip"
             ) : (
               "⚡ Find Cheapest Route"
             )}
           </button>
 
           {error && (
-            <p className="text-xs text-red-400 bg-red-900/20 border border-red-800 rounded-lg px-3 py-2">
+            <p className="mt-3 text-xs text-red-400 bg-red-900/20 border border-red-800 rounded-lg px-3 py-2">
               {error}
             </p>
           )}
+          </div>
         </div>
 
         {/* Results */}
