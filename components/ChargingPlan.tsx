@@ -9,6 +9,9 @@ interface Props {
   /** Memberships already applied to these prices, so the advice can separate
       "this is still earning its fee" from "this would start earning one". */
   membershipIds?: string[];
+  /** Select a membership and immediately re-price this route with it. Omitted
+      on read-only renders; the button is hidden when it is. */
+  onApplyMembership?: (planId: string) => void;
 }
 
 function networkColor(network: string): string {
@@ -148,7 +151,7 @@ function StopCard({ stop, index }: { stop: ChargingStop; index: number }) {
   );
 }
 
-export default function ChargingPlan({ plan, startingSoC, destinationAddress, membershipIds = [] }: Props) {
+export default function ChargingPlan({ plan, startingSoC, destinationAddress, membershipIds = [], onApplyMembership }: Props) {
   const hrs = Math.floor(plan.routeDurationMinutes / 60);
   const mins = Math.round(plan.routeDurationMinutes % 60);
   const chargeHrs = Math.floor(plan.totalChargeTimeMinutes / 60);
@@ -197,6 +200,7 @@ export default function ChargingPlan({ plan, startingSoC, destinationAddress, me
           </p>
 
           {recommended ? (
+            <>
             <p className="mt-2 text-sm leading-relaxed text-[var(--text)]">
               <span className="font-semibold text-[var(--accent)]">
                 {recommended.plan.label}
@@ -209,6 +213,15 @@ export default function ChargingPlan({ plan, startingSoC, destinationAddress, me
               so it pays for itself on this route alone
               {" "}(net ${recommended.netUsd.toFixed(2)}).
             </p>
+            {onApplyMembership && (
+              <button
+                onClick={() => onApplyMembership(recommended.plan.id)}
+                className="mt-2 h-7 px-2.5 rounded-md border border-[var(--accent)] text-[11px] font-semibold text-[var(--accent)] hover:bg-[var(--accent)] hover:text-black active:scale-[0.98] transition-colors"
+              >
+                Re-plan with this membership
+              </button>
+            )}
+            </>
           ) : (
             <p className="mt-2 text-sm leading-relaxed text-[var(--text-muted)]">
               No membership pays for itself on this trip alone. The savings below are what each
