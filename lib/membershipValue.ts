@@ -76,3 +76,35 @@ export function membershipValues(
 export function bestMembershipToBuy(values: MembershipValue[]): MembershipValue | null {
   return values.find((value) => !value.active && value.netUsd > 0) ?? null;
 }
+
+/**
+ * What the memberships the user ALREADY holds did on this trip.
+ *
+ * Needed because "no membership pays for itself on this trip alone" is a true
+ * statement about what is left to BUY and a badly misleading thing to show
+ * someone whose two active plans just saved them $83 — which is exactly what
+ * the card said before this existed. Once every plan worth holding is held,
+ * the interesting number stops being the recommendation and becomes the
+ * return on what they are already paying for.
+ */
+export interface ActiveMembershipSummary {
+  values: MembershipValue[];
+  /** Total taken off this trip by active plans. */
+  savedUsd: number;
+  /** Combined monthly cost of those plans. */
+  monthlyFeeUsd: number;
+  /** True when this one trip covers the whole monthly outlay. */
+  paysForItself: boolean;
+}
+
+export function activeMembershipSummary(values: MembershipValue[]): ActiveMembershipSummary {
+  const active = values.filter((value) => value.active);
+  const savedUsd = active.reduce((sum, value) => sum + value.tripSavingsUsd, 0);
+  const monthlyFeeUsd = active.reduce((sum, value) => sum + value.plan.monthlyFeeUsd, 0);
+  return {
+    values: active,
+    savedUsd,
+    monthlyFeeUsd,
+    paysForItself: savedUsd > monthlyFeeUsd,
+  };
+}

@@ -5,6 +5,7 @@ export const MEMBERSHIP_PLANS: MembershipPlan[] = [
   {
     id: "tesla-membership",
     label: "Tesla Supercharging Membership",
+    shortLabel: "Tesla",
     networkKey: "Tesla",
     discountPerKwh: 0.10,
     monthlyFeeUsd: 12.99,
@@ -12,6 +13,7 @@ export const MEMBERSHIP_PLANS: MembershipPlan[] = [
   {
     id: "ea-pass-plus",
     label: "Electrify America Pass+",
+    shortLabel: "EA Pass+",
     networkKey: "Electrify America",
     discountPerKwh: 0.10,
     monthlyFeeUsd: 4,
@@ -19,6 +21,7 @@ export const MEMBERSHIP_PLANS: MembershipPlan[] = [
   {
     id: "evgo-plus",
     label: "EVgo Plus",
+    shortLabel: "EVgo",
     networkKey: "EVgo",
     discountPerKwh: 0.10,
     monthlyFeeUsd: 6.99,
@@ -26,6 +29,7 @@ export const MEMBERSHIP_PLANS: MembershipPlan[] = [
   {
     id: "shell-recharge-plus",
     label: "Shell Recharge Plus",
+    shortLabel: "Shell",
     networkKey: "Shell Recharge",
     discountPerKwh: 0.07,
     monthlyFeeUsd: 4.99,
