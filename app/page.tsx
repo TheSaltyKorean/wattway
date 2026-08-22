@@ -238,7 +238,11 @@ export default function Home() {
     window.addEventListener("pointerup", onUp);
   }, [savePanel]);
 
-  const handlePlan = useCallback(async () => {
+  // `overrideMembershipIds` lets a caller plan with a membership set that has
+  // not reached state yet. The "Re-plan with this" button in the membership
+  // advice needs exactly that: setMembershipIds is async, so planning straight
+  // after it would price the trip with the OLD set and silently show no change.
+  const handlePlan = useCallback(async (overrideMembershipIds?: string[]) => {
     if (!origin || !destination) return;
     setLoading(true);
     setError(null);
@@ -257,7 +261,7 @@ export default function Home() {
         startingSoC,
         targetArrivalSoC: arrivalSoC,
         networkPrices: DEFAULT_NETWORK_PRICES,
-        memberships: membershipIds
+        memberships: (overrideMembershipIds ?? membershipIds)
           .map(getMembershipById)
           .filter((m): m is NonNullable<typeof m> => m !== undefined),
         avoidFerries,
@@ -295,6 +299,18 @@ export default function Home() {
     }
   }, [origin, destination, vias, ev, startingSoC, arrivalSoC, membershipIds, avoidFerries, avoidTolls, excludedNetworks, ionnaDiscount]);
 
+  // Act on the membership advice in one click: select the plan, persist it like
+  // any other membership choice, and immediately re-price the same route with
+  // it applied. The override is what makes the re-plan use the new set rather
+  // than the stale one still in state.
+  const handleApplyMembership = useCallback((planId: string) => {
+    if (membershipIds.includes(planId)) return;
+    const next = [...membershipIds, planId];
+    handleMembershipsChange(next);
+    track("membership_applied_from_advice", { plan_id: planId });
+    void handlePlan(next);
+  }, [membershipIds, handleMembershipsChange, handlePlan]);
+
   // A custom vehicle with a zero/blank battery or range would make the route
   // math divide by zero, so require positive specs before planning.
   const evValid =
@@ -324,7 +340,7 @@ export default function Home() {
   // already on screen and a full-strength green block competes with them.
   const planButton = (
     <button
-      onClick={handlePlan}
+      onClick={() => handlePlan()}
       disabled={!canPlan}
       className={`w-full py-3 rounded-xl font-semibold text-sm transition-all
         active:scale-[0.98] disabled:opacity-40 disabled:cursor-not-allowed disabled:scale-100
@@ -517,7 +533,13 @@ export default function Home() {
         {/* Results */}
         <div className="px-5 pb-5">
           {plan ? (
-            <ChargingPlan plan={plan} startingSoC={startingSoC} destinationAddress={plannedDestAddress} membershipIds={membershipIds} />
+            <ChargingPlan
+              plan={plan}
+              startingSoC={startingSoC}
+              destinationAddress={plannedDestAddress}
+              membershipIds={membershipIds}
+              onApplyMembership={handleApplyMembership}
+            />
           ) : (
             !loading && (
               <div className="text-center py-12 text-[var(--text-muted)]">
