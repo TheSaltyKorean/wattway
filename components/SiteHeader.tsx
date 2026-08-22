@@ -33,10 +33,13 @@ export default function SiteHeader() {
             top of it pushed the form below the fold. `neon-donate-pill` keeps
             the same blue but a calmer glow — the full-strength pulse is a lot
             in a bar that never scrolls away. */}
+        {/* rel="sponsored": a sitewide link to a payment destination is exactly
+            what the attribute is for. Without it, 200+ pages each pass ranking
+            signal to venmo.com. */}
         <a
           href="https://venmo.com/u/TheSaltyKorean"
           target="_blank"
-          rel="noopener noreferrer"
+          rel="sponsored noopener noreferrer"
           className="neon-donate-pill flex items-center gap-1.5 shrink-0 h-[30px] px-3 rounded-full text-[13px] font-semibold text-white hover:opacity-90 active:scale-[0.98] transition-all"
         >
           <svg viewBox="0 0 24 24" fill="currentColor" className="w-3.5 h-3.5" aria-hidden="true">
