@@ -35,3 +35,28 @@ export const MEMBERSHIP_PLANS: MembershipPlan[] = [
 export function getMembershipById(id: string): MembershipPlan | undefined {
   return MEMBERSHIP_PLANS.find((m) => m.id === id);
 }
+
+/**
+ * Does this plan's discount apply at this station?
+ *
+ * Shared with the optimizer on purpose. The optimizer decides what a session
+ * COSTS by matching the plan against the station, and membershipValue decides
+ * what a plan WOULD SAVE by matching the same way. If those two matchers ever
+ * disagree, the planner tells the user a membership saves money on stops it
+ * never actually discounted — so there is exactly one of them.
+ *
+ * OCM frequently omits OperatorInfo, so the station's own title is matched too:
+ * a "Tesla Supercharger — Waco" row often arrives with no operator at all.
+ */
+export function membershipCoversStation(
+  plan: MembershipPlan,
+  network: string,
+  stationName: string
+): boolean {
+  const haystack = `${network} ${stationName}`.toLowerCase();
+  return (
+    haystack.includes(plan.networkKey.toLowerCase()) ||
+    // Tesla's stations are branded "Supercharger" far more often than "Tesla".
+    (plan.networkKey === "Tesla" && haystack.includes("supercharger"))
+  );
+}

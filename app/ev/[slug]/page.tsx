@@ -121,6 +121,21 @@ export default async function EVPage({ params }: { params: Promise<{ slug: strin
     return plan ? [{ network, plan }] : [];
   });
 
+  // Lowest break-even across every plan, for the callout above the fold. The
+  // full table lower down keeps the per-plan detail; this is the headline the
+  // page previously buried several screens in.
+  const bestMembership = membershipRows
+    .map(({ network, plan }) => {
+      const savedPerCharge = kwhPerCharge * plan.discountPerKwh;
+      return {
+        network,
+        plan,
+        savedPerCharge,
+        breakEven: Math.ceil(plan.monthlyFeeUsd / savedPerCharge),
+      };
+    })
+    .sort((a, b) => a.breakEven - b.breakEven)[0];
+
   const faqs = [
     {
       q: `How much does it cost to fast-charge a ${evName(ev)}?`,
@@ -219,6 +234,42 @@ export default async function EVPage({ params }: { params: Promise<{ slug: strin
           ],
         }}
       />
+
+      {/* --- Membership headline -------------------------------------------
+          The break-even table sits several screens down, which is where the
+          most decision-useful number on the page was hiding. This surfaces the
+          single best answer immediately and links to the working. */}
+      {bestMembership && (
+        <aside className="rounded-xl border border-[var(--accent-dim)] bg-[var(--surface-2)] p-4">
+          <p className="text-xs font-medium uppercase tracking-wider text-[var(--text-muted)]">
+            Is a charging membership worth it for this car?
+          </p>
+          <p className="mt-2 text-sm leading-relaxed text-[var(--text)]">
+            The quickest to pay off is{" "}
+            <Link
+              href={`/charging-networks/${bestMembership.network.slug}`}
+              className="font-semibold text-[var(--accent)] hover:underline"
+            >
+              {bestMembership.plan.label}
+            </Link>
+            : {usd(bestMembership.plan.monthlyFeeUsd)} a month, saving{" "}
+            {usd(bestMembership.savedPerCharge)} on every {windowPct} charge, so it turns a profit
+            after{" "}
+            <span className="font-semibold text-[var(--text)]">
+              {bestMembership.breakEven} charge{bestMembership.breakEven === 1 ? "" : "s"} a month
+            </span>{" "}
+            in the {ev.model}.{" "}
+            <Link href="#memberships" className="text-[var(--accent)] hover:underline">
+              Compare every plan
+            </Link>
+            , or{" "}
+            <Link href="/" className="text-[var(--accent)] hover:underline">
+              plan a real route
+            </Link>{" "}
+            to see what each one saves on the trip you are actually taking.
+          </p>
+        </aside>
+      )}
 
       {/* --- Specs --------------------------------------------------------- */}
       <section>
@@ -478,7 +529,7 @@ export default async function EVPage({ params }: { params: Promise<{ slug: strin
       </section>
 
       {/* --- Memberships ---------------------------------------------------- */}
-      <section>
+      <section id="memberships" className="scroll-mt-20">
         <h2 className="text-xl font-semibold text-[var(--text)]">
           Do charging memberships pay off for this car?
         </h2>
