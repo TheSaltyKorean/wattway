@@ -37,6 +37,22 @@
 # the blocked setting would have cut the exact reach scripts/indexnow.mjs exists
 # to buy. Re-check after September 15 2026 — a deprecating setting is a setting
 # that can move on its own.
+#
+# A THIRD Cloudflare setting was the one actually costing crawls, and it was
+# invisible from the origin: Bot Fight Mode (Security -> Settings -> Bot traffic)
+# was ON. It issues a Managed Challenge to any client Cloudflare has not put on
+# its verified-bot list, and a crawler cannot solve a challenge, so it sees a
+# 4xx. Bing's Site Scan died at depth 0 on https://wattway.net/ with exactly
+# that — 1 page scanned, 1 error — and Cloudflare's own security events showed
+# Managed Challenges against Microsoft Azure ranges (18.97.9.x, 52.139.47.57,
+# 172.212.194.58) and Google Cloud (35.219.242.23), while AI Crawl Control
+# logged 192 unsuccessful crawler requests in 24h. Turned OFF 2026-08-22.
+#
+# Note the trap: curling this site with a bingbot or Googlebot User-Agent
+# returns 200, because Cloudflare exempts VERIFIED bots by IP. Bot Fight Mode
+# only bites crawlers off that list — Bing's Site Scan (which does not yet use
+# Bingbot IPs), AI answer engines, and anything else fetching this site. A
+# User-Agent test cannot detect it; check Cloudflare's security events instead.
 
 User-agent: *
 Allow: /
