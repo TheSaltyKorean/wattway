@@ -1,6 +1,6 @@
 "use client";
 import { TripPlan, ChargingStop } from "@/lib/types";
-import { membershipValues, bestMembershipToBuy, activeMembershipSummary } from "@/lib/membershipValue";
+import { membershipValues, membershipsToBuy, activeMembershipSummary } from "@/lib/membershipValue";
 
 interface Props {
   plan: TripPlan;
@@ -11,7 +11,7 @@ interface Props {
   membershipIds?: string[];
   /** Select a membership and immediately re-price this route with it. Omitted
       on read-only renders; the button is hidden when it is. */
-  onApplyMembership?: (planId: string) => void;
+  onApplyMembership?: (planIds: string[]) => void;
 }
 
 function networkColor(network: string): string {
@@ -157,7 +157,9 @@ export default function ChargingPlan({ plan, startingSoC, destinationAddress, me
   const chargeHrs = Math.floor(plan.totalChargeTimeMinutes / 60);
   const chargeMins = plan.totalChargeTimeMinutes % 60;
   const membershipAdvice = membershipValues(plan, membershipIds);
-  const recommended = bestMembershipToBuy(membershipAdvice);
+  const recommended = membershipsToBuy(membershipAdvice);
+  const recommendedSavings = recommended.reduce((sum, v) => sum + v.tripSavingsUsd, 0);
+  const recommendedFees = recommended.reduce((sum, v) => sum + v.plan.monthlyFeeUsd, 0);
   const held = activeMembershipSummary(membershipAdvice);
 
   return (
@@ -200,26 +202,54 @@ export default function ChargingPlan({ plan, startingSoC, destinationAddress, me
             Membership check
           </p>
 
-          {recommended ? (
+          {recommended.length > 0 ? (
             <>
             <p className="mt-2 text-sm leading-relaxed text-[var(--text)]">
-              <span className="font-semibold text-[var(--accent)]">
-                {recommended.plan.label}
-              </span>{" "}
-              would take{" "}
-              <span className="font-semibold text-[var(--accent)]">
-                ${recommended.tripSavingsUsd.toFixed(2)}
-              </span>{" "}
-              off this trip — more than its ${recommended.plan.monthlyFeeUsd.toFixed(2)}/mo fee,
-              so it pays for itself on this route alone
-              {" "}(net ${recommended.netUsd.toFixed(2)}).
+              {recommended.length === 1 ? (
+                <>
+                  <span className="font-semibold text-[var(--accent)]">
+                    {recommended[0].plan.label}
+                  </span>{" "}
+                  would take{" "}
+                  <span className="font-semibold text-[var(--accent)]">
+                    ${recommended[0].tripSavingsUsd.toFixed(2)}
+                  </span>{" "}
+                  off this trip — more than its ${recommended[0].plan.monthlyFeeUsd.toFixed(2)}/mo
+                  fee, so it pays for itself on this route alone
+                  {" "}(net ${recommended[0].netUsd.toFixed(2)}).
+                </>
+              ) : (
+                /* A long route can cross several partner networks and clear the
+                   fee on each. Naming only the best one leaves money on the
+                   table and contradicts the savings list right below it. */
+                <>
+                  <span className="font-semibold text-[var(--accent)]">
+                    {recommended.length} memberships
+                  </span>{" "}
+                  each pay for themselves on this trip:{" "}
+                  {recommended.map((value, i) => (
+                    <span key={value.plan.id}>
+                      {i > 0 && (i === recommended.length - 1 ? " and " : ", ")}
+                      {value.plan.shortLabel} (${value.tripSavingsUsd.toFixed(2)} vs $
+                      {value.plan.monthlyFeeUsd.toFixed(2)}/mo)
+                    </span>
+                  ))}
+                  . Together they would take{" "}
+                  <span className="font-semibold text-[var(--accent)]">
+                    ${recommendedSavings.toFixed(2)}
+                  </span>{" "}
+                  off this trip against ${recommendedFees.toFixed(2)}/mo in fees.
+                </>
+              )}
             </p>
             {onApplyMembership && (
               <button
-                onClick={() => onApplyMembership(recommended.plan.id)}
+                onClick={() => onApplyMembership(recommended.map((v) => v.plan.id))}
                 className="mt-2 h-7 px-2.5 rounded-md border border-[var(--accent)] text-[11px] font-semibold text-[var(--accent)] hover:bg-[var(--accent)] hover:text-black active:scale-[0.98] transition-colors"
               >
-                Re-plan with this membership
+                {recommended.length === 1
+                  ? "Re-plan with this membership"
+                  : `Re-plan with all ${recommended.length}`}
               </button>
             )}
             </>
