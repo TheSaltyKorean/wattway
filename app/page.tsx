@@ -402,7 +402,8 @@ export default function Home() {
               radius and origin marker), so it reads as the card folding shut
               rather than a different screen. */}
           {formCollapsed && (
-            <button
+            <div>
+              <button
               onClick={() => setFormCollapsed(false)}
               aria-expanded={false}
               className="flex items-center gap-2.5 w-full h-12 px-3 border border-[var(--border)] rounded-xl bg-[var(--surface-2)] text-left hover:border-[var(--text-muted)] transition-colors"
@@ -417,7 +418,32 @@ export default function Home() {
                   <polyline points="6 9 12 15 18 9" />
                 </svg>
               </span>
-            </button>
+              </button>
+
+              {/* The rest of the collapsed form, read back as chips. Without
+                  these the collapsed state silently drops the inputs the price
+                  depends on — the car and the memberships — and the cost below
+                  looks like it came from nowhere. Tapping any of them reopens
+                  the form, same as Edit. */}
+              <div className="flex flex-wrap gap-1.5 mt-2">
+                {[
+                  `${startingSoC}% → ${arrivalSoC}%`,
+                  ev.id === "custom" ? "Custom vehicle" : `${ev.make} ${ev.model}`,
+                  membershipIds.length === 0
+                    ? "No memberships"
+                    : `${membershipIds.length} membership${membershipIds.length === 1 ? "" : "s"}`,
+                  ...(ionnaDiscount && isIonnaEligible(ev) ? ["Ionna discount"] : []),
+                ].map((chip) => (
+                  <button
+                    key={chip}
+                    onClick={() => setFormCollapsed(false)}
+                    className="h-8 px-3 rounded-full border border-[var(--border)] bg-[var(--surface-2)] text-xs text-[var(--text-muted)] hover:text-[var(--text)] hover:border-[var(--text-muted)] transition-colors max-w-full truncate"
+                  >
+                    {chip}
+                  </button>
+                ))}
+              </div>
+            </div>
           )}
 
           {/* CSS-hidden, never unmounted: the Google autocomplete widgets are
