@@ -180,9 +180,11 @@ export default function Home() {
   const [plannedDestAddress, setPlannedDestAddress] = useState<string | undefined>(undefined);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  // Once a plan comes back on a phone, the trip form collapses to a one-line
-  // route summary so the results own the panel; tapping it reopens the whole
-  // form. Desktop never collapses — the docked column has room for both.
+  // Once a plan comes back, the trip form collapses to a one-line route summary
+  // plus chips so the results own the panel; clicking either reopens the whole
+  // form. This applies on every viewport: the docked desktop column is narrow
+  // and tall, so an expanded form pushes the stop list below the fold there
+  // just as it does on a phone.
   // Collapsing is CSS-only (`hidden`): unmounting TripForm would blank the
   // uncontrolled Google autocomplete widgets, same reason the panel never
   // remounts on a dock change.
@@ -266,7 +268,7 @@ export default function Home() {
       });
       setPlan(result);
       setPlannedDestAddress(destination.address);
-      if (isMobile) setFormCollapsed(true);
+      setFormCollapsed(true);
       // Real "plans planned" signal for the usage report. Before this, plans
       // were inferred from Routes API call counts, which double-count retries
       // and miss nothing-but-also-tell-nothing about failures. Aggregate,
@@ -291,7 +293,7 @@ export default function Home() {
     } finally {
       setLoading(false);
     }
-  }, [origin, destination, vias, ev, startingSoC, arrivalSoC, membershipIds, avoidFerries, avoidTolls, excludedNetworks, ionnaDiscount, isMobile]);
+  }, [origin, destination, vias, ev, startingSoC, arrivalSoC, membershipIds, avoidFerries, avoidTolls, excludedNetworks, ionnaDiscount]);
 
   // A custom vehicle with a zero/blank battery or range would make the route
   // math divide by zero, so require positive specs before planning.
