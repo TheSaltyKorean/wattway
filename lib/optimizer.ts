@@ -185,6 +185,49 @@ export async function getRoute(
 const SEGMENT_MILES = 120;
 const SEGMENT_PARALLELISM = 4;
 
+/**
+ * GET one OCM segment, retrying transient failures.
+ *
+ * A long route is many segment requests — Austin to Seattle is 18 — issued in
+ * batches. Before this, ANY one of them failing rejected the whole plan, and a
+ * bare `fetch()` rejection surfaces as the browser's "Failed to fetch", which
+ * tells the user nothing and looks like the app is broken on long trips
+ * specifically. The failure rate per request does not have to be high for that
+ * to bite when you make eighteen of them.
+ *
+ * Retries network errors and 5xx/429 with a short backoff. A 4xx other than 429
+ * is not retried — it will fail identically the second time. On final failure
+ * the error names the real cause instead of "Failed to fetch".
+ */
+async function fetchSegmentJson(url: string, attempts = 3): Promise<any[]> {
+  let lastError: unknown;
+  for (let attempt = 0; attempt < attempts; attempt++) {
+    if (attempt > 0) {
+      // 400ms, 800ms — long enough for a blip or a rate-limit window to pass,
+      // short enough not to add real latency to an already slow long route.
+      await new Promise((resolve) => setTimeout(resolve, 400 * attempt));
+    }
+    try {
+      const res = await fetch(url);
+      if (res.ok) return await res.json();
+      // Retry only what can plausibly succeed next time.
+      if (res.status !== 429 && res.status < 500) {
+        throw new Error(`Open Charge Map returned ${res.status}`);
+      }
+      lastError = new Error(`Open Charge Map returned ${res.status}`);
+    } catch (e) {
+      // A failed fetch() rejects with a TypeError carrying no useful detail.
+      lastError = e;
+      if (e instanceof Error && e.message.startsWith("Open Charge Map returned 4")) throw e;
+    }
+  }
+  throw new Error(
+    "Couldn't reach Open Charge Map for part of this route. This is usually " +
+      "temporary on long trips — try again." +
+      (lastError instanceof Error ? ` (${lastError.message})` : "")
+  );
+}
+
 export async function fetchChargersAlongRoute(
   routeCoords: Coordinates[],
   networkPrices: Record<string, number>,
@@ -239,9 +282,7 @@ export async function fetchChargersAlongRoute(
       includecomments: "false",
     });
     if (ocmApiKey) params.set("key", ocmApiKey);
-    const res = await fetch(`${OCM_BASE}/poi/?${params}`);
-    if (!res.ok) throw new Error("Open Charge Map API error");
-    const list: any[] = await res.json();
+    const list: any[] = await fetchSegmentJson(`${OCM_BASE}/poi/?${params}`);
     // Cap hit → the box was too dense; halve the segment and recurse.
     // Two-point segments get an interpolated midpoint so they can still split.
     if (list.length >= OCM_CAP && depth < 3) {

@@ -303,11 +303,15 @@ export default function Home() {
   // any other membership choice, and immediately re-price the same route with
   // it applied. The override is what makes the re-plan use the new set rather
   // than the stale one still in state.
-  const handleApplyMembership = useCallback((planId: string) => {
-    if (membershipIds.includes(planId)) return;
-    const next = [...membershipIds, planId];
+  const handleApplyMemberships = useCallback((planIds: string[]) => {
+    const added = planIds.filter((id) => !membershipIds.includes(id));
+    if (added.length === 0) return;
+    const next = [...membershipIds, ...added];
     handleMembershipsChange(next);
-    track("membership_applied_from_advice", { plan_id: planId });
+    track("membership_applied_from_advice", {
+      plan_ids: added.join(","),
+      count: added.length,
+    });
     void handlePlan(next);
   }, [membershipIds, handleMembershipsChange, handlePlan]);
 
@@ -538,7 +542,7 @@ export default function Home() {
               startingSoC={startingSoC}
               destinationAddress={plannedDestAddress}
               membershipIds={membershipIds}
-              onApplyMembership={handleApplyMembership}
+              onApplyMembership={handleApplyMemberships}
             />
           ) : (
             !loading && (

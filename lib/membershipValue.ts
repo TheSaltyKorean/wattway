@@ -66,15 +66,24 @@ export function membershipValues(
 }
 
 /**
- * The one plan worth recommending, or null.
+ * Every plan worth buying for this trip, best first.
  *
- * Only ever an INACTIVE plan that clears its own monthly fee on this trip
- * alone — the bar for telling someone to spend money should be that they come
- * out ahead on the trip in front of them, not that they might over a
- * hypothetical month of charging.
+ * Only INACTIVE plans that clear their own monthly fee on this trip alone —
+ * the bar for telling someone to spend money should be that they come out
+ * ahead on the trip in front of them, not that they might over a hypothetical
+ * month of charging.
+ *
+ * A long route can cross two or three partner networks and clear the fee on
+ * each; recommending only the first left real money on the table and made the
+ * card look wrong next to its own savings list.
  */
+export function membershipsToBuy(values: MembershipValue[]): MembershipValue[] {
+  return values.filter((value) => !value.active && value.netUsd > 0);
+}
+
+/** Back-compat single-best accessor: the first of membershipsToBuy, or null. */
 export function bestMembershipToBuy(values: MembershipValue[]): MembershipValue | null {
-  return values.find((value) => !value.active && value.netUsd > 0) ?? null;
+  return membershipsToBuy(values)[0] ?? null;
 }
 
 /**
