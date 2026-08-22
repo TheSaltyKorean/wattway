@@ -297,7 +297,9 @@ export default function ChargingPlan({ plan, startingSoC, destinationAddress, me
           <div className="min-w-0">
             <p className="font-medium text-sm truncate">Destination</p>
             {destinationAddress && (
-              <p className="text-xs text-[var(--text-muted)] truncate">{destinationAddress}</p>
+              // The user's own destination — masked from session replay, same
+              // as the form fields. See components/Clarity.
+              <p className="text-xs text-[var(--text-muted)] truncate" data-clarity-mask="true">{destinationAddress}</p>
             )}
           </div>
         </div>

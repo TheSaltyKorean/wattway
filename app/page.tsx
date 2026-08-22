@@ -409,7 +409,10 @@ export default function Home() {
               className="flex items-center gap-2.5 w-full h-12 px-3 border border-[var(--border)] rounded-xl bg-[var(--surface-2)] text-left hover:border-[var(--text-muted)] transition-colors"
             >
               <span className="w-2.5 h-2.5 shrink-0 rounded-full border-2 border-[var(--accent)]" aria-hidden="true" />
-              <span className="flex-1 min-w-0 truncate text-sm font-semibold text-[var(--text)]">
+              <span
+                className="flex-1 min-w-0 truncate text-sm font-semibold text-[var(--text)]"
+                data-clarity-mask="true"
+              >
                 {shortAddress(origin?.address)} → {shortAddress(destination?.address)}
               </span>
               <span className="shrink-0 flex items-center gap-1 text-xs text-[var(--text-muted)]">
