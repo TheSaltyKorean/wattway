@@ -316,6 +316,33 @@ export default function Home() {
         panelMode === "left" ? "md:order-1 md:border-r" : "md:order-3 md:border-l",
       ].join(" ");
 
+  // Rendered twice — in flow on desktop, in the phone's pinned footer — so the
+  // primary action is always reachable in both the expanded and collapsed
+  // states. Once a plan exists it drops to an outlined button: the results are
+  // already on screen and a full-strength green block competes with them.
+  const planButton = (
+    <button
+      onClick={handlePlan}
+      disabled={!canPlan}
+      className={`w-full py-3 rounded-xl font-semibold text-sm transition-all
+        active:scale-[0.98] disabled:opacity-40 disabled:cursor-not-allowed disabled:scale-100
+        ${plan && !loading
+          ? "border border-[var(--border)] bg-[var(--surface-2)] text-[var(--text)] hover:border-[var(--text-muted)]"
+          : "bg-[var(--accent)] text-black hover:opacity-90"}`}
+    >
+      {loading ? (
+        <span className="flex items-center justify-center gap-2">
+          <span className="w-4 h-4 border-2 border-black/30 border-t-black rounded-full animate-spin" />
+          Planning route…
+        </span>
+      ) : plan ? (
+        "⚡ Re-plan trip"
+      ) : (
+        "⚡ Find Cheapest Route"
+      )}
+    </button>
+  );
+
   const panel = (
     <div
       className={panelClass}
@@ -443,34 +470,17 @@ export default function Home() {
 
           </div>
 
-          {/* Pinned on a phone so the primary action never scrolls away; a
-              normal in-flow button on desktop, where the column is short. */}
-          <div className="sticky bottom-0 -mx-5 px-5 py-3 bg-[var(--surface)] border-t border-[var(--border)] md:static md:mx-0 md:px-0 md:py-0 md:bg-transparent md:border-t-0">
-          <button
-            onClick={handlePlan}
-            disabled={!canPlan}
-            className="w-full py-3 rounded-xl font-semibold text-sm transition-all
-              bg-[var(--accent)] text-black hover:opacity-90 active:scale-[0.98]
-              disabled:opacity-40 disabled:cursor-not-allowed disabled:scale-100"
-          >
-            {loading ? (
-              <span className="flex items-center justify-center gap-2">
-                <span className="w-4 h-4 border-2 border-black/30 border-t-black rounded-full animate-spin" />
-                Planning route…
-              </span>
-            ) : plan ? (
-              "⚡ Re-plan trip"
-            ) : (
-              "⚡ Find Cheapest Route"
-            )}
-          </button>
+          {/* Desktop keeps the button in flow; the phone gets it as a real
+              panel footer below (a `sticky` element here would drift up into
+              the middle of the panel once the form collapses, since sticky
+              only holds an element whose natural position is off-screen). */}
+          <div className="hidden md:block">{planButton}</div>
 
           {error && (
-            <p className="mt-3 text-xs text-red-400 bg-red-900/20 border border-red-800 rounded-lg px-3 py-2">
+            <p className="text-xs text-red-400 bg-red-900/20 border border-red-800 rounded-lg px-3 py-2">
               {error}
             </p>
           )}
-          </div>
         </div>
 
         {/* Results */}
@@ -589,6 +599,13 @@ export default function Home() {
           </p>
         </div>
 
+        </div>
+
+        {/* Phone-only pinned footer: a sibling of the scroll area, so the
+            primary action holds the bottom of the panel whether the form is
+            expanded or collapsed. Desktop renders the button in flow instead. */}
+        <div className="md:hidden shrink-0 px-5 py-3 border-t border-[var(--border)] bg-[var(--surface)]">
+          {planButton}
         </div>
     </div>
   );
