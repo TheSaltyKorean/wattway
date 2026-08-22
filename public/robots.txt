@@ -21,6 +21,22 @@
 # It was found ON and was turned OFF on 2026-08-10. Do not re-enable it without
 # also rewriting this file, or the two will contradict each other. If AI crawlers
 # start being turned away again, check that setting FIRST.
+#
+# Verified 2026-08-22: Managed robots.txt still OFF, and this file is served
+# verbatim — fetched as bingbot, Googlebot, GPTBot and ClaudeBot, all four got
+# the content below with no edge-injected block. Cloudflare's per-zone bot
+# policy also reads Search=Allow, Agent=Allow, Training=Allow.
+#
+# Same visit, a SECOND Cloudflare setting was found pointing the other way and
+# was changed: Security -> Settings -> Bot traffic -> "Block AI bots", whose
+# September 15 2026 change folds MIXED-PURPOSE crawlers (used for both search
+# indexing and AI training) into the AI-training block. It was set to "Mixed
+# purpose crawlers will be blocked on September 15"; it is now "will continue to
+# be allowed", which is what this file has always said the intent is. Bingbot is
+# mixed-purpose, and Bing's index grounds Copilot and part of ChatGPT search, so
+# the blocked setting would have cut the exact reach scripts/indexnow.mjs exists
+# to buy. Re-check after September 15 2026 — a deprecating setting is a setting
+# that can move on its own.
 
 User-agent: *
 Allow: /
