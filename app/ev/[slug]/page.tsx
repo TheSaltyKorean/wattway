@@ -18,6 +18,7 @@ import {
   duration,
   usd,
   pageSocialMetadata,
+  fitTitle,
 } from "@/lib/seo";
 import {
   costPer100Miles,
@@ -73,7 +74,17 @@ export async function generateMetadata({
 
   const networks = chargingNetworks();
   const cheapest = networks[0];
-  const title = `${evName(ev)} Road Trip Charging Cost & Stops`;
+  // Vehicle names vary from 22 to 51 characters, so the suffix has to give way
+  // rather than the name — see fitTitle in lib/seo.
+  const title = fitTitle(evName(ev), [
+    "Road Trip Charging Cost & Stops",
+    "Charging Cost & Stops",
+    "Charging Cost",
+    // Last resort before the bare name: even the longest vehicle name still has
+    // room for one keyword, and a title that is only a model name ranks for
+    // nothing.
+    "Charging",
+  ]);
   const description =
     `${evName(ev)}: ${ev.batteryKwh} kWh battery, ${ev.rangeMiles} mi EPA range, ` +
     `${ev.maxChargekW} kW peak charging. A 10-80% fast charge costs about ` +

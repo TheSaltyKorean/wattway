@@ -13,6 +13,33 @@ export const SITE_NAME = "WattWay";
 export const PRICING_YEAR = 2026;
 
 /**
+ * Longest title that still fits a search result.
+ *
+ * Bing warns above 70 characters and truncates past it; Google cuts on pixel
+ * width around the same place. The count that matters is the RENDERED one,
+ * which includes the " | WattWay" that app/layout.tsx's title template appends
+ * — easy to forget, and the reason 121 vehicle pages shipped with titles up to
+ * 93 characters (found in Bing's Site Scan, 2026-08-22).
+ *
+ * Pass the subject plus suffixes from most to least descriptive; the first
+ * combination that fits wins, and if none do, the subject goes out alone rather
+ * than being cut mid-word. Vehicle names range from "BMW i4 eDrive40 (2024)" to
+ * "Hyundai IONIQ 6 SEL/Limited RWD (20-in) (2023-2024)", so no single fixed
+ * suffix works for all of them.
+ */
+export const TITLE_MAX_CHARS = 70;
+const BRAND_SUFFIX_CHARS = ` | ${SITE_NAME}`.length;
+
+export function fitTitle(subject: string, suffixes: string[]): string {
+  const budget = TITLE_MAX_CHARS - BRAND_SUFFIX_CHARS;
+  for (const suffix of suffixes) {
+    const candidate = `${subject} ${suffix}`;
+    if (candidate.length <= budget) return candidate;
+  }
+  return subject;
+}
+
+/**
  * Date the site's content was last substantively revised, used as the sitemap's
  * lastmod. Bump it when pages change in a way a crawler should re-read; leaving
  * it pinned is deliberate, because a lastmod that moves on every deploy is noise

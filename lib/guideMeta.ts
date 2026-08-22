@@ -15,7 +15,9 @@ export interface GuideMeta {
 export const GUIDE_META: GuideMeta[] = [
   {
     slug: "hyundai-genesis-ionna-discount",
-    title: "Hyundai & Genesis Ionna Discount: 20% Off Charging Through Sept 30, 2026",
+    // Trimmed to fit a search result once " | WattWay" is appended (see
+    // fitTitle in lib/seo); the full framing lives in the description and H1.
+    title: "Hyundai & Genesis Ionna Discount: 20% Off Through Sept 2026",
     description:
       "Eligible Hyundai and Genesis EV owners get 10% off every Ionna fast-charging session — 20% " +
       "through September 30, 2026. Who qualifies (IONIQ 5, IONIQ 5 N, IONIQ 9, Kona Electric, " +
