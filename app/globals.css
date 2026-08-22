@@ -46,3 +46,28 @@ body.app-busy,
 body.app-busy * {
   cursor: wait !important;
 }
+
+/* Top-bar donate pill. Same blue as .neon-donate, but a gentler pulse: it sits
+   in a sticky bar on every page, where the full-strength glow reads as a strobe
+   on a small screen. */
+@keyframes neon-glow-soft {
+  0%, 100% {
+    box-shadow: 0 0 4px rgba(0, 178, 255, 0.5), 0 0 10px rgba(0, 178, 255, 0.35);
+  }
+  50% {
+    box-shadow: 0 0 10px rgba(0, 178, 255, 0.7), 0 0 20px rgba(0, 178, 255, 0.5);
+  }
+}
+
+.neon-donate-pill {
+  background: #008cff;
+  animation: neon-glow-soft 2.4s ease-in-out infinite;
+}
+
+/* Respect users who ask for less motion: keep the colour, drop the pulse. */
+@media (prefers-reduced-motion: reduce) {
+  .neon-donate,
+  .neon-donate-pill {
+    animation: none;
+  }
+}
