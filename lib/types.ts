@@ -76,6 +76,9 @@ export interface NetworkPrices {
 export interface MembershipPlan {
   id: string;
   label: string;
+  /** Compact name for tight rows (the post-plan advice list), where the full
+      label truncates and takes the "active" marker with it. */
+  shortLabel: string;
   networkKey: string;
   discountPerKwh: number;
   monthlyFeeUsd: number;

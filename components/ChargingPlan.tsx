@@ -1,6 +1,6 @@
 "use client";
 import { TripPlan, ChargingStop } from "@/lib/types";
-import { membershipValues, bestMembershipToBuy } from "@/lib/membershipValue";
+import { membershipValues, bestMembershipToBuy, activeMembershipSummary } from "@/lib/membershipValue";
 
 interface Props {
   plan: TripPlan;
@@ -158,6 +158,7 @@ export default function ChargingPlan({ plan, startingSoC, destinationAddress, me
   const chargeMins = plan.totalChargeTimeMinutes % 60;
   const membershipAdvice = membershipValues(plan, membershipIds);
   const recommended = bestMembershipToBuy(membershipAdvice);
+  const held = activeMembershipSummary(membershipAdvice);
 
   return (
     <div className="space-y-4">
@@ -222,6 +223,30 @@ export default function ChargingPlan({ plan, startingSoC, destinationAddress, me
               </button>
             )}
             </>
+          ) : held.values.length > 0 ? (
+            /* Everything worth buying is already held. The useful number is now
+               the return on what they pay for, not an upsell — saying "no
+               membership pays for itself" here reads as false to someone whose
+               active plans just saved them real money. */
+            <p className="mt-2 text-sm leading-relaxed text-[var(--text)]">
+              Your {held.values.length === 1 ? "membership" : "memberships"} took{" "}
+              <span className="font-semibold text-[var(--accent)]">
+                ${held.savedUsd.toFixed(2)}
+              </span>{" "}
+              off this trip
+              {held.paysForItself ? (
+                <>
+                  {" "}— more than the ${held.monthlyFeeUsd.toFixed(2)}/mo they cost, so this trip
+                  alone covers them.
+                </>
+              ) : (
+                <>
+                  , against ${held.monthlyFeeUsd.toFixed(2)}/mo in fees. This trip does not cover
+                  them on its own.
+                </>
+              )}{" "}
+              No other plan pays for itself here.
+            </p>
           ) : (
             <p className="mt-2 text-sm leading-relaxed text-[var(--text-muted)]">
               No membership pays for itself on this trip alone. The savings below are what each
@@ -232,12 +257,14 @@ export default function ChargingPlan({ plan, startingSoC, destinationAddress, me
           <ul className="mt-3 space-y-1.5">
             {membershipAdvice.map((value) => (
               <li key={value.plan.id} className="flex items-baseline gap-2 text-xs">
-                <span className="flex-1 min-w-0 truncate text-[var(--text)]">
-                  {value.plan.label}
-                  {value.active && (
-                    <span className="ml-1.5 text-[var(--accent)]">· active</span>
-                  )}
-                </span>
+                {/* shortLabel, not label: the full names truncate in this row
+                    and took the "active" marker with them. The marker is now a
+                    sibling of the truncating element, so it always shows. */}
+                <span className="min-w-0 truncate text-[var(--text)]">{value.plan.shortLabel}</span>
+                {value.active && (
+                  <span className="shrink-0 text-[var(--accent)]">· active</span>
+                )}
+                <span className="flex-1" />
                 <span className="shrink-0 tabular-nums text-[var(--text-muted)]">
                   {value.stopCount} stop{value.stopCount === 1 ? "" : "s"} ·{" "}
                   {Math.round(value.kwhOnNetwork)} kWh
