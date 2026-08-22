@@ -19,6 +19,7 @@ import {
   CANDIDATE_WINDOW,
 } from "./chargingMath";
 import { isIonnaStation } from "./ionnaDiscount";
+import { membershipCoversStation } from "./memberships";
 
 const ROUTES_API_URL = "https://routes.googleapis.com/directions/v2:computeRoutes";
 const OCM_BASE = "https://api.openchargemap.io/v3";
@@ -328,8 +329,9 @@ export async function fetchChargersAlongRoute(
     // Apply member pricing for subscribed networks
     let effectivePrice = publishedPrice ?? fallbackPrice;
     for (const plan of memberships) {
-      if (haystack.includes(plan.networkKey.toLowerCase()) ||
-          (plan.networkKey === "Tesla" && haystack.includes("supercharger"))) {
+      // Same matcher the post-plan membership advice uses — see
+      // membershipCoversStation in lib/memberships.
+      if (membershipCoversStation(plan, network, poi.AddressInfo.Title ?? "")) {
         effectivePrice = Math.max(0, effectivePrice - plan.discountPerKwh);
         break;
       }

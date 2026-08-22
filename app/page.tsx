@@ -486,7 +486,7 @@ export default function Home() {
         {/* Results */}
         <div className="px-5 pb-5">
           {plan ? (
-            <ChargingPlan plan={plan} startingSoC={startingSoC} destinationAddress={plannedDestAddress} />
+            <ChargingPlan plan={plan} startingSoC={startingSoC} destinationAddress={plannedDestAddress} membershipIds={membershipIds} />
           ) : (
             !loading && (
               <div className="text-center py-12 text-[var(--text-muted)]">

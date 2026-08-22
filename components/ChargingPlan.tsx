@@ -1,10 +1,14 @@
 "use client";
 import { TripPlan, ChargingStop } from "@/lib/types";
+import { membershipValues, bestMembershipToBuy } from "@/lib/membershipValue";
 
 interface Props {
   plan: TripPlan;
   startingSoC: number;
   destinationAddress?: string;
+  /** Memberships already applied to these prices, so the advice can separate
+      "this is still earning its fee" from "this would start earning one". */
+  membershipIds?: string[];
 }
 
 function networkColor(network: string): string {
@@ -144,11 +148,13 @@ function StopCard({ stop, index }: { stop: ChargingStop; index: number }) {
   );
 }
 
-export default function ChargingPlan({ plan, startingSoC, destinationAddress }: Props) {
+export default function ChargingPlan({ plan, startingSoC, destinationAddress, membershipIds = [] }: Props) {
   const hrs = Math.floor(plan.routeDurationMinutes / 60);
   const mins = Math.round(plan.routeDurationMinutes % 60);
   const chargeHrs = Math.floor(plan.totalChargeTimeMinutes / 60);
   const chargeMins = plan.totalChargeTimeMinutes % 60;
+  const membershipAdvice = membershipValues(plan, membershipIds);
+  const recommended = bestMembershipToBuy(membershipAdvice);
 
   return (
     <div className="space-y-4">
@@ -181,6 +187,65 @@ export default function ChargingPlan({ plan, startingSoC, destinationAddress }: 
           )}
         </div>
       </div>
+
+      {/* Membership advice — the trip-specific answer to "is a subscription
+          worth it?", which the vehicle pages can only answer generically. */}
+      {membershipAdvice.length > 0 && (
+        <div className="bg-[var(--surface-2)] border border-[var(--border)] rounded-xl p-4">
+          <p className="text-xs font-medium uppercase tracking-wider text-[var(--text-muted)]">
+            Membership check
+          </p>
+
+          {recommended ? (
+            <p className="mt-2 text-sm leading-relaxed text-[var(--text)]">
+              <span className="font-semibold text-[var(--accent)]">
+                {recommended.plan.label}
+              </span>{" "}
+              would take{" "}
+              <span className="font-semibold text-[var(--accent)]">
+                ${recommended.tripSavingsUsd.toFixed(2)}
+              </span>{" "}
+              off this trip — more than its ${recommended.plan.monthlyFeeUsd.toFixed(2)}/mo fee,
+              so it pays for itself on this route alone
+              {" "}(net ${recommended.netUsd.toFixed(2)}).
+            </p>
+          ) : (
+            <p className="mt-2 text-sm leading-relaxed text-[var(--text-muted)]">
+              No membership pays for itself on this trip alone. The savings below are what each
+              would be worth here, against its monthly fee.
+            </p>
+          )}
+
+          <ul className="mt-3 space-y-1.5">
+            {membershipAdvice.map((value) => (
+              <li key={value.plan.id} className="flex items-baseline gap-2 text-xs">
+                <span className="flex-1 min-w-0 truncate text-[var(--text)]">
+                  {value.plan.label}
+                  {value.active && (
+                    <span className="ml-1.5 text-[var(--accent)]">· active</span>
+                  )}
+                </span>
+                <span className="shrink-0 tabular-nums text-[var(--text-muted)]">
+                  {value.stopCount} stop{value.stopCount === 1 ? "" : "s"} ·{" "}
+                  {Math.round(value.kwhOnNetwork)} kWh
+                </span>
+                <span
+                  className={`shrink-0 tabular-nums font-semibold ${
+                    value.netUsd > 0 ? "text-[var(--accent)]" : "text-[var(--text-muted)]"
+                  }`}
+                >
+                  {value.active ? "saved " : ""}${value.tripSavingsUsd.toFixed(2)}
+                </span>
+              </li>
+            ))}
+          </ul>
+
+          <p className="mt-3 text-[11px] leading-relaxed text-[var(--text-muted)]">
+            Savings are priced against these exact stops. Joining can also change which stops are
+            cheapest, so the real figure can be higher — never lower.
+          </p>
+        </div>
+      )}
 
       {/* Stops */}
       {plan.stops.length === 0 ? (
