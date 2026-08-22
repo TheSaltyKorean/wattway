@@ -183,7 +183,20 @@ export async function getRoute(
 // Long routes are queried in overlapping segments — a single query centered on
 // the route midpoint hits OCM's result cap and starves the route's endpoints.
 const SEGMENT_MILES = 120;
-const SEGMENT_PARALLELISM = 4;
+// Open Charge Map rate-limits per key, and a hard limit can come back without
+// CORS headers — which the browser reports as a bare "Failed to fetch", not a
+// readable 429. Four in flight tripped it on long routes (verified: bursts of 4
+// returned 429 across the board), so the corridor query now goes two at a time.
+// Slower on a 2000-mile route, but it completes instead of dying at stop 12.
+const SEGMENT_PARALLELISM = 2;
+// Longest segment the adaptive sizing will produce. A 2100-mile route at the
+// flat 120-mile size needs 18 requests; stretching segments keeps that closer
+// to a dozen. Capped because an over-long segment's bounding box swells (it is
+// the box around the whole segment, so a curving one is wide), pulls in more
+// than the per-request result cap, and gets subdivided anyway — trading one
+// request for three.
+const SEGMENT_MILES_MAX = 200;
+const SEGMENT_TARGET_COUNT = 12;
 
 /**
  * GET one OCM segment, retrying transient failures.
@@ -199,13 +212,15 @@ const SEGMENT_PARALLELISM = 4;
  * is not retried — it will fail identically the second time. On final failure
  * the error names the real cause instead of "Failed to fetch".
  */
-async function fetchSegmentJson(url: string, attempts = 3): Promise<any[]> {
+async function fetchSegmentJson(url: string, attempts = 4): Promise<any[]> {
   let lastError: unknown;
   for (let attempt = 0; attempt < attempts; attempt++) {
     if (attempt > 0) {
-      // 400ms, 800ms — long enough for a blip or a rate-limit window to pass,
-      // short enough not to add real latency to an already slow long route.
-      await new Promise((resolve) => setTimeout(resolve, 400 * attempt));
+      // 800ms, 2s, 4.5s. A rate-limit window has to actually expire, so the
+      // earlier 400/800ms backoff just spent the retries inside the same
+      // window and failed identically three times.
+      const waitMs = [0, 800, 2000, 4500][Math.min(attempt, 3)];
+      await new Promise((resolve) => setTimeout(resolve, waitMs));
     }
     try {
       const res = await fetch(url);
@@ -216,14 +231,17 @@ async function fetchSegmentJson(url: string, attempts = 3): Promise<any[]> {
       }
       lastError = new Error(`Open Charge Map returned ${res.status}`);
     } catch (e) {
-      // A failed fetch() rejects with a TypeError carrying no useful detail.
+      // A rejected fetch() carries no detail — and a rate limit reaches the
+      // browser this way whenever the error response arrives without CORS
+      // headers, so "Failed to fetch" here usually MEANS throttled, not
+      // offline. Retried for that reason.
       lastError = e;
       if (e instanceof Error && e.message.startsWith("Open Charge Map returned 4")) throw e;
     }
   }
   throw new Error(
-    "Couldn't reach Open Charge Map for part of this route. This is usually " +
-      "temporary on long trips — try again." +
+    "Open Charge Map is rate-limiting this route's charger lookups. Long trips " +
+      "need many queries; waiting a minute and re-planning usually clears it." +
       (lastError instanceof Error ? ` (${lastError.message})` : "")
   );
 }
@@ -245,6 +263,17 @@ export async function fetchChargersAlongRoute(
   // corridor bounding box. Boxes hug the corridor, so dense metro areas don't
   // blow past the per-request result cap the way big radius queries do; if a
   // segment still hits the cap, it is subdivided and re-queried.
+  // Size segments to the route so long trips do not make proportionally more
+  // requests — see SEGMENT_MILES_MAX.
+  let routeMiles = 0;
+  for (let i = 0; i < routeCoords.length - 1; i++) {
+    routeMiles += haversine(routeCoords[i], routeCoords[i + 1]);
+  }
+  const segmentMiles = Math.min(
+    SEGMENT_MILES_MAX,
+    Math.max(SEGMENT_MILES, routeMiles / SEGMENT_TARGET_COUNT)
+  );
+
   const segments: Coordinates[][] = [];
   let current: Coordinates[] = [routeCoords[0]];
   let sinceLast = 0;
@@ -252,8 +281,8 @@ export async function fetchChargersAlongRoute(
     let a = routeCoords[i];
     const b = routeCoords[i + 1];
     let segLen = haversine(a, b);
-    while (segLen > 0 && sinceLast + segLen >= SEGMENT_MILES) {
-      const t = (SEGMENT_MILES - sinceLast) / segLen;
+    while (segLen > 0 && sinceLast + segLen >= segmentMiles) {
+      const t = (segmentMiles - sinceLast) / segLen;
       a = { lat: a.lat + (b.lat - a.lat) * t, lng: a.lng + (b.lng - a.lng) * t };
       current.push(a);
       segments.push(current);
