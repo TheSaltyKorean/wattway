@@ -35,6 +35,9 @@ jobs:
           # Optional Google Analytics 4 measurement id (G-XXXXXXXX). If the
           # GA_ID secret is unset the tag is inert (see components/Analytics.tsx).
           NEXT_PUBLIC_GA_ID: ${{ secrets.GA_ID }}
+          # Optional Microsoft Clarity project id. If the CLARITY_ID secret is
+          # unset the tag is inert (see components/Clarity.tsx).
+          NEXT_PUBLIC_CLARITY_ID: ${{ secrets.CLARITY_ID }}
       - uses: actions/upload-pages-artifact@v3
         with:
           path: out

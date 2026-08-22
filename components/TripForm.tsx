@@ -196,7 +196,11 @@ function GeocoderInput({ label, value, onChange, placeholder, onRemove, fillSign
       <span className="w-3 shrink-0 flex justify-center">{marker}</span>
       <label className="sr-only">{label}</label>
 
-      <div className="flex-1 min-w-0">
+      {/* data-clarity-mask: this subtree shows where the user lives and where
+          they are going. Clarity masks input VALUES by default, which does not
+          cover the resolved address once it renders as page text, nor the
+          Google autocomplete's own suggestion list. Mask the whole row. */}
+      <div className="flex-1 min-w-0" data-clarity-mask="true">
         {hasKey ? (
           <>
             {/* Autocomplete stays mounted (hidden) — swapping it out loses its text */}
