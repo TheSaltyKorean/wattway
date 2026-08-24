@@ -17,12 +17,22 @@ const NAV = [
   { href: "/faq", label: "FAQ" },
 ];
 
-export default function SiteHeader() {
+/**
+ * `brandHref` — where the ⚡ WattWay brand goes. Defaults to "/" (the usual
+ * logo-is-home convention). The planner IS "/", so there the logo was a dead
+ * click: a Clarity session replay caught a first-time visitor clicking it and
+ * getting nothing. On that one page it points at the FAQ instead, which is
+ * what someone clicking the brand on the landing page is actually after.
+ */
+export default function SiteHeader({ brandHref = "/" }: { brandHref?: string }) {
+  const brandIsHome = brandHref === "/";
   return (
     <header className="sticky top-0 z-30 shrink-0 border-b border-[var(--border)] bg-[var(--surface)]/95 backdrop-blur supports-[backdrop-filter]:bg-[var(--surface)]/80">
       <div className="mx-auto max-w-6xl px-4 h-14 flex items-center gap-4">
         <Link
-          href="/"
+          href={brandHref}
+          title={brandIsHome ? undefined : "What is WattWay?"}
+          aria-label={brandIsHome ? undefined : "WattWay — what is this?"}
           className="flex items-center gap-1.5 font-bold text-[var(--text)] shrink-0"
         >
           <span aria-hidden="true">⚡</span> WattWay

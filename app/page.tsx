@@ -669,7 +669,7 @@ export default function Home() {
 
   return (
     <div className="flex flex-col h-[100dvh] overflow-hidden">
-      <SiteHeader />
+      <SiteHeader brandHref="/faq" />
       <div className="flex-1 min-h-0 flex flex-col md:flex-row overflow-hidden relative">
         {panel}
         {/* Map: on mobile a fixed slice of the viewport at the top so it's
