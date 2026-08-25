@@ -123,6 +123,9 @@ export default function ContentPage({
               <Link href="/faq" className="hover:text-[var(--accent)] transition-colors">
                 FAQ
               </Link>
+              <Link href="/changelog" className="hover:text-[var(--accent)] transition-colors">
+                Changelog
+              </Link>
               <Link href="/legal" className="hover:text-[var(--accent)] transition-colors">
                 Legal disclaimer
               </Link>

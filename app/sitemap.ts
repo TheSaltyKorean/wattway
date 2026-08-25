@@ -25,6 +25,9 @@ export default function sitemap(): MetadataRoute.Sitemap {
     { url: `${SITE_URL}/charging-networks`, lastModified, changeFrequency: "monthly", priority: 0.9 },
     { url: `${SITE_URL}/guides`, lastModified, changeFrequency: "monthly", priority: 0.8 },
     { url: `${SITE_URL}/faq`, lastModified, changeFrequency: "monthly", priority: 0.8 },
+    // Changes more often than the evergreen content pages, and its whole value
+    // is being current, so it gets a weekly hint.
+    { url: `${SITE_URL}/changelog`, lastModified, changeFrequency: "weekly", priority: 0.5 },
     ...GUIDES.map((guide) => ({
       url: `${SITE_URL}/guides/${guide.slug}`,
       lastModified,
