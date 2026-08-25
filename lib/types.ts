@@ -39,6 +39,11 @@ export interface ChargerStation {
   operatorUrl: string | null;
   stationUrl: string | null;
   pricePerKwh: number;
+  /** Price before any membership or rideshare discount was applied. Kept so the
+      post-plan membership advice can price a plan the user does NOT hold
+      against the true undiscounted rate instead of trying to invert whatever
+      discount already landed on pricePerKwh. */
+  basePricePerKwh: number;
   priceIsPublished: boolean;
   connectorTypes: string[];
   distanceFromRouteMiles: number;
@@ -84,6 +89,22 @@ export interface MembershipPlan {
   monthlyFeeUsd: number;
 }
 
+/**
+ * One network's discount under an Uber/Lyft driver program. Lives here rather
+ * than in lib/rideshareDiscount so TripInput can reference it without the
+ * types module importing back into a lib that imports types.
+ */
+export interface RideshareBenefit {
+  /** Membership plan whose network matcher identifies the covered stations. */
+  networkPlanId: string;
+  /** Dollars off per kWh, or 0 when the benefit is a fraction instead. */
+  discountPerKwh: number;
+  /** Fraction (0..1) off the session price, or 0 when it is a per-kWh amount. */
+  discountFraction: number;
+  /** Human-readable rate for the UI, e.g. "EVgo Plus rates" or "29% off". */
+  rateLabel: string;
+}
+
 export interface TripInput {
   origin: Waypoint;
   destination: Waypoint;
@@ -104,4 +125,8 @@ export interface TripInput {
   // owner discount. Already gated in the UI on vehicle eligibility + opt-in +
   // date, so the optimizer just applies it to Ionna stations. 0 = no discount.
   ionnaDiscountFraction?: number;
+  // Network discounts earned by driving for Uber/Lyft. Already resolved from
+  // platform + reward tier in the UI, so the optimizer just applies them.
+  // Empty/absent = no rideshare program.
+  rideshareBenefits?: RideshareBenefit[];
 }

@@ -1,5 +1,5 @@
 "use client";
-import { TripPlan, ChargingStop } from "@/lib/types";
+import { TripPlan, ChargingStop, RideshareBenefit } from "@/lib/types";
 import { membershipValues, membershipsToBuy, activeMembershipSummary } from "@/lib/membershipValue";
 
 interface Props {
@@ -9,6 +9,9 @@ interface Props {
   /** Memberships already applied to these prices, so the advice can separate
       "this is still earning its fee" from "this would start earning one". */
   membershipIds?: string[];
+  /** Uber/Lyft driver discounts already applied to these prices, so the advice
+      never recommends buying a plan the platform hands out free. */
+  rideshareBenefits?: RideshareBenefit[];
   /** Select a membership and immediately re-price this route with it. Omitted
       on read-only renders; the button is hidden when it is. */
   onApplyMembership?: (planIds: string[]) => void;
@@ -151,12 +154,12 @@ function StopCard({ stop, index }: { stop: ChargingStop; index: number }) {
   );
 }
 
-export default function ChargingPlan({ plan, startingSoC, destinationAddress, membershipIds = [], onApplyMembership }: Props) {
+export default function ChargingPlan({ plan, startingSoC, destinationAddress, membershipIds = [], rideshareBenefits = [], onApplyMembership }: Props) {
   const hrs = Math.floor(plan.routeDurationMinutes / 60);
   const mins = Math.round(plan.routeDurationMinutes % 60);
   const chargeHrs = Math.floor(plan.totalChargeTimeMinutes / 60);
   const chargeMins = plan.totalChargeTimeMinutes % 60;
-  const membershipAdvice = membershipValues(plan, membershipIds);
+  const membershipAdvice = membershipValues(plan, membershipIds, rideshareBenefits);
   const recommended = membershipsToBuy(membershipAdvice);
   const recommendedSavings = recommended.reduce((sum, v) => sum + v.tripSavingsUsd, 0);
   const recommendedFees = recommended.reduce((sum, v) => sum + v.plan.monthlyFeeUsd, 0);
