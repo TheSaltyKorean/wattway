@@ -1,5 +1,6 @@
-import { ChargingStop, MembershipPlan, TripPlan } from "./types";
+import { ChargingStop, MembershipPlan, RideshareBenefit, TripPlan } from "./types";
 import { MEMBERSHIP_PLANS, membershipCoversStation } from "./memberships";
+import { rideshareSupersedes } from "./rideshareDiscount";
 
 /**
  * What each charging membership is worth on ONE planned trip.
@@ -36,21 +37,47 @@ export interface MembershipValue {
  * also pick different, better stops once that network gets cheaper — so real
  * savings can exceed this. Never present it as an upper bound.
  *
+ * `rideshareBenefits` are the Uber/Lyft driver discounts already priced into
+ * the trip. They matter here for two reasons, and getting either wrong turns
+ * this card into bad financial advice:
+ *
+ *  1. A plan the driver already gets FREE from the platform (EVgo Plus) is
+ *     dropped outright — telling someone to buy what they hold is the same
+ *     class of bug as telling a holder no membership pays for itself.
+ *  2. On a network where the platform discount and the paid plan are rival
+ *     choices made per session (Electrify America), the plan is only worth its
+ *     INCREMENTAL saving over the rate the driver already gets — which is
+ *     often nothing, and must never be quoted as the full per-kWh discount.
+ *
  * Returned sorted by netUsd descending, so the caller can take the first entry
  * as the recommendation.
  */
 export function membershipValues(
   trip: TripPlan,
-  activeIds: string[] = []
+  activeIds: string[] = [],
+  rideshareBenefits: RideshareBenefit[] = []
 ): MembershipValue[] {
   const active = new Set(activeIds);
 
-  return MEMBERSHIP_PLANS.map((plan) => {
+  return MEMBERSHIP_PLANS.filter(
+    // Free from the platform: not a purchase, so not a recommendation.
+    (plan) => active.has(plan.id) || !rideshareSupersedes(plan, rideshareBenefits)
+  ).map((plan) => {
     const covered = trip.stops.filter((stop: ChargingStop) =>
       membershipCoversStation(plan, stop.station.network, stop.station.name)
     );
     const kwhOnNetwork = covered.reduce((sum, stop) => sum + stop.kwhAdded, 0);
-    const tripSavingsUsd = kwhOnNetwork * plan.discountPerKwh;
+    // An active plan's worth is simply the discount it is already applying.
+    // An inactive one is worth what it would take off the price the driver
+    // pays TODAY — which equals the flat per-kWh discount when nothing else
+    // covers the network, and shrinks to the incremental gain when a rideshare
+    // rate is already doing the work.
+    const tripSavingsUsd = active.has(plan.id)
+      ? kwhOnNetwork * plan.discountPerKwh
+      : covered.reduce((sum, stop) => {
+          const withPlan = Math.max(0, stop.station.basePricePerKwh - plan.discountPerKwh);
+          return sum + Math.max(0, stop.station.pricePerKwh - withPlan) * stop.kwhAdded;
+        }, 0);
 
     return {
       plan,

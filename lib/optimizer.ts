@@ -3,6 +3,7 @@ import {
   ChargingStop,
   Coordinates,
   MembershipPlan,
+  RideshareBenefit,
   TripInput,
   TripPlan,
   Waypoint,
@@ -19,6 +20,7 @@ import {
   CANDIDATE_WINDOW,
 } from "./chargingMath";
 import { isIonnaStation } from "./ionnaDiscount";
+import { ridesharePrice } from "./rideshareDiscount";
 import { membershipCoversStation } from "./memberships";
 
 const ROUTES_API_URL = "https://routes.googleapis.com/directions/v2:computeRoutes";
@@ -256,7 +258,10 @@ export async function fetchChargersAlongRoute(
   minPowerKw: number = 50,
   // Fraction (0..1) taken off Ionna station prices for an eligible Hyundai/
   // Genesis owner using Plug & Charge; 0 disables it.
-  ionnaDiscountFraction: number = 0
+  ionnaDiscountFraction: number = 0,
+  // Network discounts from an Uber/Lyft driver program; empty = none. Already
+  // resolved from platform + reward tier by the caller.
+  rideshareBenefits: RideshareBenefit[] = []
 ): Promise<ChargerStation[]> {
   // Split the route into segments of at most SEGMENT_MILES (interpolating cut
   // points — vertex snapping can leave gaps), then query each segment's
@@ -397,14 +402,26 @@ export async function fetchChargersAlongRoute(
     })();
 
     // Apply member pricing for subscribed networks
-    let effectivePrice = publishedPrice ?? fallbackPrice;
+    const basePrice = publishedPrice ?? fallbackPrice;
+    let effectivePrice = basePrice;
     for (const plan of memberships) {
       // Same matcher the post-plan membership advice uses — see
       // membershipCoversStation in lib/memberships.
       if (membershipCoversStation(plan, network, poi.AddressInfo.Title ?? "")) {
-        effectivePrice = Math.max(0, effectivePrice - plan.discountPerKwh);
+        effectivePrice = Math.max(0, basePrice - plan.discountPerKwh);
         break;
       }
+    }
+    // Uber/Lyft driver rates. A membership and a rideshare plan are picked per
+    // session and never stack — you select one when you start the charge — so
+    // this takes the cheaper of the two off the SAME base price rather than
+    // compounding them. Discounting an already-discounted price would invent a
+    // rate no driver can actually get.
+    if (rideshareBenefits.length > 0) {
+      effectivePrice = Math.min(
+        effectivePrice,
+        ridesharePrice(basePrice, network, poi.AddressInfo.Title ?? "", rideshareBenefits)
+      );
     }
     // Hyundai/Genesis Plug & Charge discount at Ionna — a percentage off whatever
     // the session would otherwise cost (published rate or fallback). Already
@@ -425,6 +442,7 @@ export async function fetchChargersAlongRoute(
       operatorUrl: poi.OperatorInfo?.WebsiteURL ?? null,
       stationUrl: poi.AddressInfo?.RelatedURL || null,
       pricePerKwh: effectivePrice,
+      basePricePerKwh: basePrice,
       connectorTypes: [...new Set(connectorTypes)],
       distanceFromRouteMiles: distFromRoute,
       priceIsPublished: publishedPrice !== null,
@@ -748,7 +766,8 @@ export async function planTrip(input: TripInput): Promise<TripPlan> {
     input.memberships ?? [],
     ocmKey,
     Math.min(50, input.ev.maxChargekW),
-    input.ionnaDiscountFraction ?? 0
+    input.ionnaDiscountFraction ?? 0,
+    input.rideshareBenefits ?? []
   );
   // Only plan leg-by-leg when a via actually carries a per-stop setting; plain
   // via stops keep the single-pass behavior (identical results).

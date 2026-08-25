@@ -1,5 +1,5 @@
 "use client";
-import { useState, useCallback, useEffect, useRef } from "react";
+import { useState, useCallback, useEffect, useMemo, useRef } from "react";
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import { EVModel, TripPlan, Waypoint } from "@/lib/types";
@@ -12,6 +12,13 @@ import NetworkExcluder from "@/components/NetworkExcluder";
 import ChargingPlan from "@/components/ChargingPlan";
 import { getMembershipById } from "@/lib/memberships";
 import { isIonnaEligible, ionnaDiscountRate, ionnaBonusActive } from "@/lib/ionnaDiscount";
+import {
+  RidesharePlatform,
+  RideshareTier,
+  getRideshareProgram,
+  rideshareBenefits as resolveRideshareBenefits,
+} from "@/lib/rideshareDiscount";
+import RideshareSelector from "@/components/RideshareSelector";
 import { useBusyCursor } from "@/lib/useBusyCursor";
 import { track, countPlan } from "@/lib/analytics";
 import SiteHeader from "@/components/SiteHeader";
@@ -71,6 +78,10 @@ export default function Home() {
   // Opt-in for the Hyundai/Genesis Ionna Plug & Charge discount. Only applied
   // when the selected car is also eligible (see ionnaEligible below).
   const [ionnaDiscount, setIonnaDiscount] = useState(false);
+  // Uber/Lyft driver discounts. Gated on who you drive for, not what you drive,
+  // so unlike the Ionna opt-in this is independent of the vehicle picker.
+  const [ridesharePlatform, setRidesharePlatform] = useState<RidesharePlatform | null>(null);
+  const [rideshareTier, setRideshareTier] = useState<RideshareTier>("base");
 
   // Remember the user's car and memberships across visits.
   // Storage can throw in restricted contexts — persistence is best-effort.
@@ -120,6 +131,12 @@ export default function Home() {
         if (Array.isArray(nets)) setExcludedNetworks(nets.filter((n) => typeof n === "string"));
       }
       if (localStorage.getItem("wattway.ionnaDiscount") === "1") setIonnaDiscount(true);
+      const savedRideshare = localStorage.getItem("wattway.rideshare");
+      if (savedRideshare) {
+        const r = JSON.parse(savedRideshare);
+        if (r.platform === "uber" || r.platform === "lyft") setRidesharePlatform(r.platform);
+        if (r.tier === "base" || r.tier === "gold-plus") setRideshareTier(r.tier);
+      }
       const savedPanel = localStorage.getItem("wattway.panel");
       if (savedPanel) {
         const p = JSON.parse(savedPanel);
@@ -163,6 +180,24 @@ export default function Home() {
     setIonnaDiscount(on);
     try { localStorage.setItem("wattway.ionnaDiscount", on ? "1" : "0"); } catch { /* best-effort */ }
   }, []);
+  const handleRideshareChange = useCallback(
+    (platform: RidesharePlatform | null, tier: RideshareTier) => {
+      setRidesharePlatform(platform);
+      setRideshareTier(tier);
+      try {
+        localStorage.setItem("wattway.rideshare", JSON.stringify({ platform, tier }));
+      } catch { /* best-effort */ }
+    },
+    []
+  );
+
+  // Resolved once here so the optimizer and the post-plan membership advice
+  // can never disagree about which discounts the driver has.
+  const activeRideshareBenefits = useMemo(
+    () => (ridesharePlatform ? resolveRideshareBenefits(ridesharePlatform, rideshareTier) : []),
+    [ridesharePlatform, rideshareTier]
+  );
+
   const [startingSoC, setStartingSoC] = useState(80);
   const [arrivalSoC, setArrivalSoC] = useState(10);
   // Route options. Ferries are avoided by default so "driving" routes never
@@ -269,6 +304,7 @@ export default function Home() {
         excludedNetworks,
         ionnaDiscountFraction:
           ionnaDiscount && isIonnaEligible(ev) ? ionnaDiscountRate() : 0,
+        rideshareBenefits: activeRideshareBenefits,
       });
       setPlan(result);
       setPlannedDestAddress(destination.address);
@@ -290,6 +326,9 @@ export default function Home() {
         // Ionna discount applied this plan: 0 = off/ineligible, 0.1 or 0.2 = rate.
         // Measures adoption of the Hyundai/Genesis discount feature; non-identifying.
         ionna_discount: ionnaDiscount && isIonnaEligible(ev) ? ionnaDiscountRate() : 0,
+        // Rideshare program applied this plan, e.g. "none" or "lyft:gold-plus".
+        // Adoption signal for the driver discounts; non-identifying.
+        rideshare: ridesharePlatform ? `${ridesharePlatform}:${rideshareTier}` : "none",
       });
     } catch (e) {
       setError(e instanceof Error ? e.message : "Something went wrong");
@@ -297,7 +336,7 @@ export default function Home() {
     } finally {
       setLoading(false);
     }
-  }, [origin, destination, vias, ev, startingSoC, arrivalSoC, membershipIds, avoidFerries, avoidTolls, excludedNetworks, ionnaDiscount]);
+  }, [origin, destination, vias, ev, startingSoC, arrivalSoC, membershipIds, avoidFerries, avoidTolls, excludedNetworks, ionnaDiscount, activeRideshareBenefits, ridesharePlatform, rideshareTier]);
 
   // Act on the membership advice in one click: select the plan, persist it like
   // any other membership choice, and immediately re-price the same route with
@@ -458,6 +497,9 @@ export default function Home() {
                     ? "No memberships"
                     : `${membershipIds.length} membership${membershipIds.length === 1 ? "" : "s"}`,
                   ...(ionnaDiscount && isIonnaEligible(ev) ? ["Ionna discount"] : []),
+                  ...(ridesharePlatform
+                    ? [`${getRideshareProgram(ridesharePlatform).label} driver`]
+                    : []),
                 ].map((chip) => (
                   <button
                     key={chip}
@@ -498,6 +540,11 @@ export default function Home() {
           />
           <EVSelector value={ev} onChange={handleEVChange} />
           <MembershipSelector selected={membershipIds} onChange={handleMembershipsChange} />
+          <RideshareSelector
+            platform={ridesharePlatform}
+            tier={rideshareTier}
+            onChange={handleRideshareChange}
+          />
           {isIonnaEligible(ev) && (
             <label className="flex items-start gap-2.5 cursor-pointer select-none">
               <input
@@ -542,6 +589,7 @@ export default function Home() {
               startingSoC={startingSoC}
               destinationAddress={plannedDestAddress}
               membershipIds={membershipIds}
+              rideshareBenefits={activeRideshareBenefits}
               onApplyMembership={handleApplyMemberships}
             />
           ) : (
