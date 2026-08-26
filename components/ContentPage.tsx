@@ -130,6 +130,31 @@ export default function ContentPage({
                 Legal disclaimer
               </Link>
             </p>
+            {/* Google Preferred Sources badge. Deeplink (not Google's JS button)
+                because these pages ship no client JS and the CSP would have to
+                allow Google's script otherwise. The dark asset is used
+                unconditionally: the site has no light theme, so a
+                prefers-color-scheme swap would wrongly show the light badge to a
+                light-OS visitor who is still seeing the dark site. Official
+                assets from developers.google.com/search/docs/appearance/preferred-sources. */}
+            <p>
+              <a
+                href="https://www.google.com/preferences/source?q=wattway.net"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-block"
+                aria-label="Add WattWay as a preferred source on Google"
+              >
+                <img
+                  src="/google-preferred-source-dark.png"
+                  srcSet="/google-preferred-source-dark.png 1x, /google-preferred-source-dark@2x.png 2x"
+                  width={169}
+                  height={53}
+                  alt="Add as a preferred source on Google"
+                  className="h-auto w-auto"
+                />
+              </a>
+            </p>
           </div>
         </footer>
       </div>
