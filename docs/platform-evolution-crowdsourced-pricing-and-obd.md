@@ -146,6 +146,25 @@ build — open contribution invites spam.
 seed from existing sources and lean on WattWay's routing quality to attract the users
 who then contribute.
 
+**Candidate seed / benchmark sources** (to bootstrap before crowdsourced reports
+carry the dataset, and to cross-check contributions afterward):
+
+- **Open Charge Map** — what WattWay already uses. Free and openly licensed, but its
+  prices are sparse and static (no time-of-day, no surge), so it seeds coverage, not
+  the temporal signal this product is about.
+- **Network APIs / published rate cards** — authoritative per-network base rates
+  (EVgo, Electrify America, etc.), useful as the cross-check baseline for outlier
+  rejection. Still not time-resolved for networks that don't publish schedules.
+- **Roaming aggregators (e.g. Presto)** — the closest existing thing to what we'd
+  build: a commercial app already surfacing live, cross-network, time-of-day per-kWh
+  pricing. Two things to take from it. First, it's evidence the temporal-pricing
+  dataset is a real, monetizable asset, not a hypothetical. Second, it's a
+  *proprietary B2B feed* — any use is a commercial agreement, not an open dataset, so
+  it could at most be a licensed seed, never something we redistribute freely. It
+  also can't touch WattWay proper (static site, referrer-protected keys); it would
+  live only in the new app's backend. Its existence bears directly on the
+  open-vs-proprietary licensing question below.
+
 ### 3.2 OBD / telematics integration
 
 **What the user gets:** the app reads the car directly — real state of charge, real
@@ -260,7 +279,11 @@ largest platform pieces before committing to mobile or crowdsourcing.
 ## Open questions
 
 - **Data licensing** — is the crowdsourced pricing database open (community goodwill,
-  share-alike) or proprietary (a moat, but OSM's terms constrain it)?
+  share-alike) or proprietary (a moat, but OSM's terms constrain it)? Still open. The
+  existence of paid aggregators like Presto (see §3.1) is a point *for* proprietary —
+  it shows fresh, verified, time-of-day pricing is something companies pay for rather
+  than give away — but it trades against the easier contribution, seeding, and
+  OSM-compatibility of an open dataset. Not decided here.
 - **Connected-car priority** — cloud telematics vs. the OBD dongle, and which
   provider.
 - **Budget** — appetite for a real cost floor on the new app (WattWay stays ~$0).
