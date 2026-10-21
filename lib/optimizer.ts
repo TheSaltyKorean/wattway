@@ -467,7 +467,11 @@ export async function fetchChargersAlongRoute(
       maxPowerKw: maxPower,
       fastPortCount,
       recentlyVerified: poi.IsRecentlyVerified === true,
-      operatorUrl: poi.OperatorInfo?.WebsiteURL ?? null,
+      // OCM's Tesla operator links point at an Australian support page; send
+      // US drivers to the Supercharger map instead.
+      operatorUrl: /^tesla\b/i.test(network)
+        ? "https://www.tesla.com/findus?v=2&filters=supercharger"
+        : poi.OperatorInfo?.WebsiteURL ?? null,
       stationUrl: poi.AddressInfo?.RelatedURL || null,
       pricePerKwh: effectivePrice,
       basePricePerKwh: basePrice,
