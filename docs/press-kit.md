@@ -25,8 +25,8 @@ Supporting facts, all already verifiable on the site:
 - Data provenance is honest and citable: Google Routes API + Open Charge Map.
 
 Secondary angle if the price one is passed on: **the Ionna Hyundai/Genesis owner
-discount** (10%, 20% through Sept 30 2026) is under-reported and WattWay prices it
-in automatically. That is a news hook with an expiry date, which editors like.
+discount** (10%; the 20% bonus ended Sept 30 2026) is under-reported, and WattWay
+prices it in when the owner opts in for a qualifying car.
 
 ## Target list, best-fit first
 
@@ -81,6 +81,7 @@ parallel — an exclusive is worth more to them and to you.
 
 ## What to do when coverage lands
 
-Every article link is a backlink; submit the article URL via IndexNow
-(`scripts/indexnow.mjs`) and expect ranking movement to follow within weeks —
+Every article link is a backlink. IndexNow can't submit another outlet's URL
+(`scripts/indexnow.mjs` only resubmits wattway.net's own sitemap), so just let
+crawlers find the article and expect ranking movement to follow within weeks —
 that is the mechanism, not more on-page tuning.

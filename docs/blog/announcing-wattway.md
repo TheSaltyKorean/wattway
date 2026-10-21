@@ -64,8 +64,9 @@ plans on that same trip came back at $83.80 saved against $19.98 a month in fees
 
 ## What else is in there
 
-**The Ionna owner discount.** Eligible Hyundai and Genesis owners get 10% off Ionna sessions — 20%
-through September 30, 2026 — and the planner prices it in automatically when your car qualifies.
+**The Ionna owner discount.** Eligible Hyundai and Genesis owners get 10% off Ionna sessions
+(20% through September 30, 2026); tick the Ionna option for a qualifying car and the planner
+prices it in.
 
 **Stops you choose, respected.** Add waypoints, mark the ones where you will charge overnight
 anyway, and set the battery level you want to arrive on. The route plans around them.

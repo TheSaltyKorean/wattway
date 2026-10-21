@@ -125,10 +125,10 @@ export default function HomeIntro() {
         <p className="mt-2 text-sm leading-relaxed text-[var(--text-muted)]">
           WattWay is a free EV trip planner that routes around it. Give it two
           addresses and your car, and it pulls the real driving route, looks at
-          every fast charger in a ten-mile corridor along it, and picks the
-          stops that make the trip <em>cheapest</em> — not the ones that happen
-          to be closest. No account, no ads, and nothing about your trip leaves
-          your browser.
+          every fast charger in a ten-mile corridor along it, and picks stops
+          by <em>price</em> — not just the ones that happen to be closest. No
+          account and no ads; your route goes only to Google and Open Charge
+          Map to look up the drive and the chargers along it.
         </p>
       </div>
 
