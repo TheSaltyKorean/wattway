@@ -45,7 +45,7 @@ export function fitTitle(subject: string, suffixes: string[]): string {
  * it pinned is deliberate, because a lastmod that moves on every deploy is noise
  * crawlers learn to ignore.
  */
-export const CONTENT_LAST_MODIFIED = "2026-08-10";
+export const CONTENT_LAST_MODIFIED = "2026-10-20";
 
 /**
  * Rough US residential electricity rate, used wherever a page contrasts home

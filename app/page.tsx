@@ -22,6 +22,7 @@ import RideshareSelector from "@/components/RideshareSelector";
 import { useBusyCursor } from "@/lib/useBusyCursor";
 import { track, countPlan } from "@/lib/analytics";
 import SiteHeader from "@/components/SiteHeader";
+import HomeIntro from "@/components/HomeIntro";
 
 const MapView = dynamic(() => import("@/components/MapView"), { ssr: false });
 
@@ -623,6 +624,8 @@ export default function Home() {
             )
           )}
         </div>
+
+        <HomeIntro />
 
         {/* Footer: reference-content nav + legal disclaimer. The nav is also how
             crawlers reach the static /ev, /charging-networks, /guides and /faq
