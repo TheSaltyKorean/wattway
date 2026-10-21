@@ -19,6 +19,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   is used instead. Per-minute and connect-fee prices are no longer misread as
   a per-kWh rate. Francis Energy sites listed under the parent company, EV
   Energy Group, now get Francis pricing, which is updated to $0.52/kWh.
+- **Station links that point at the wrong company.** When a charger's listed
+  "station site" is just another company's homepage (Durant, OK's
+  Francis-hosted Tesla Supercharger linked to francisenergy.com, whose map
+  doesn't show it), the plan now links the actual operator instead.
 
 ## 2026-08
 

@@ -131,8 +131,16 @@ function StopCard({ stop, index }: { stop: ChargingStop; index: number }) {
           // a malformed station URL must fall back to the operator link rather
           // than suppress the community link entirely.
           const usable = (u: string | null) => (safeUrl(u) && urlHost(u!) ? u! : null);
-          const stationU = usable(stop.station.stationUrl);
           const operatorU = usable(stop.station.operatorUrl);
+          // A bare homepage on a different company's domain isn't a station
+          // page — it's usually the host or a former operator (Durant, OK's
+          // Francis-hosted Tesla Supercharger links francisenergy.com, whose
+          // map doesn't list it), so prefer the actual operator's link.
+          const isBareForeignHomepage = (u: string) =>
+            !!operatorU && new URL(u).pathname.replace(/\/+$/, "") === "" &&
+            urlHost(u) !== urlHost(operatorU);
+          const rawStationU = usable(stop.station.stationUrl);
+          const stationU = rawStationU && !isBareForeignHomepage(rawStationU) ? rawStationU : null;
           const url = stationU ?? operatorU;
           if (!url) return null;
           const host = urlHost(url)!; // non-null: url passed the usable() check
