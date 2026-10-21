@@ -113,6 +113,19 @@ function routePasses(
   return passes;
 }
 
+// OCM operator titles that are another name for a network we price. Francis
+// Energy sites are now listed under its parent, "EV Energy Group (FCN)" (same
+// sites, duplicated under both), which would otherwise get the generic default.
+const OPERATOR_ALIASES: [RegExp, string][] = [[/^ev energy group\b/i, "Francis Energy"]];
+
+function canonicalNetwork(title: string): string {
+  for (const [re, name] of OPERATOR_ALIASES) if (re.test(title)) return name;
+  return title;
+}
+
+// OCM published prices older than this are ignored in favor of network defaults.
+const STALE_PRICE_MS = 3 * 365 * 24 * 60 * 60 * 1000;
+
 // Parse OCM's free-text UsageCost field to get $/kWh
 function parseOCMPrice(usageCost: string | null | undefined): number | null {
   if (!usageCost) return null;
@@ -124,6 +137,9 @@ function parseOCMPrice(usageCost: string | null | undefined): number | null {
     const v = parseFloat(kwhMatch[1]);
     if (v >= 0 && v < 5) return v;
   }
+  // Time-based or session-fee pricing ("$1.00 to Connect, $0.21 per minute")
+  // has no $/kWh equivalent — the first dollar amount is a fee, not a rate.
+  if (/min|hour|\/hr|\bhr\b|connect|session/.test(s)) return null;
   // Fallback: first dollar-like decimal in a reasonable range
   const numMatch = s.match(/\$(\d+\.\d+)/);
   if (numMatch) {
@@ -369,7 +385,7 @@ export async function fetchChargersAlongRoute(
     // hide a station that may well be live.
     if (poi.StatusType && poi.StatusType.IsOperational === false) continue;
 
-    const network: string = poi.OperatorInfo?.Title ?? "Default";
+    const network = canonicalNetwork(poi.OperatorInfo?.Title ?? "Default");
 
     let maxPower = 0;
     let fastPortCount = 0;
@@ -386,7 +402,19 @@ export async function fetchChargersAlongRoute(
     // Use OCM's published UsageCost first, fall back to network defaults.
     // OCM often lacks OperatorInfo, so match against the station name too.
     const haystack = `${network} ${poi.AddressInfo.Title ?? ""}`.toLowerCase();
-    const publishedPrice = parseOCMPrice(poi.UsageCost ?? poi.AddressInfo?.UsageCost);
+    // A price nobody has confirmed in years is likely wrong (e.g. a 2020
+    // "Free" co-op listing for a site now on a paid network), and a stale
+    // $0 beats every real station — use the network default instead.
+    const lastConfirmed = Math.max(
+      ...[poi.DateLastVerified, poi.DateLastStatusUpdate, poi.DateCreated]
+        .map((d) => (d ? Date.parse(d) : NaN))
+        .filter((t) => !Number.isNaN(t)),
+      0
+    );
+    const priceIsStale = Date.now() - lastConfirmed > STALE_PRICE_MS;
+    const publishedPrice = priceIsStale
+      ? null
+      : parseOCMPrice(poi.UsageCost ?? poi.AddressInfo?.UsageCost);
     const fallbackPrice = (() => {
       if (networkPrices[network] !== undefined && network !== "Default") return networkPrices[network];
       for (const [key, price] of Object.entries(networkPrices)) {
