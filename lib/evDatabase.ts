@@ -1788,7 +1788,7 @@ export const DEFAULT_NETWORK_PRICES: Record<string, number> = {
   "ChargePoint": 0.48,
   "Blink": 0.59,
   "EVgo": 0.55,
-  "Francis Energy": 0.39,
+  "Francis Energy": 0.52,
   "Ionna": 0.39,
   "Shell Recharge": 0.52,
   "Volta": 0.49,

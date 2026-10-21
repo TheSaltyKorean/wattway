@@ -224,7 +224,7 @@ const NETWORK_NOTES: Record<string, { blurb: string; kind: ChargingNetwork["kind
   "Francis Energy": {
     kind: "regional",
     blurb:
-      "A regional operator concentrated in Oklahoma and the surrounding states, built to fill in fast-charging gaps across rural corridors that the national networks skipped. Typically prices below the national average.",
+      "A regional operator concentrated in Oklahoma and the surrounding states, built to fill in fast-charging gaps across rural corridors that the national networks skipped. Many sites are 50 kW units, so it is often a coverage stop rather than a cheap or fast one.",
   },
   Ionna: {
     kind: "automaker",

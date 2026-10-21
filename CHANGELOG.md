@@ -9,6 +9,17 @@ numbers, so entries are grouped by the month they went live.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## 2026-10
+
+### Fixed
+
+- **Stale and per-minute charger prices.** A station price nobody has
+  confirmed in three years (such as an old "Free" listing for a site that is
+  now on a paid network) no longer wins the plan; the network's default rate
+  is used instead. Per-minute and connect-fee prices are no longer misread as
+  a per-kWh rate. Francis Energy sites listed under the parent company, EV
+  Energy Group, now get Francis pricing, which is updated to $0.52/kWh.
+
 ## 2026-08
 
 ### Added
