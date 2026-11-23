@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import Analytics from "@/components/Analytics";
+import VisitBeacon from "@/components/VisitBeacon";
 import Clarity from "@/components/Clarity";
 
 const SITE_URL = "https://wattway.net/";
@@ -188,6 +189,7 @@ export default function RootLayout({
       </head>
       <body className="antialiased">
         {children}
+        <VisitBeacon />
       </body>
     </html>
   );

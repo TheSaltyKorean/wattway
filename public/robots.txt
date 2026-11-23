@@ -1,7 +1,7 @@
 # WattWay — https://wattway.net
 # Search crawlers and AI answer engines are welcome to index and cite WattWay.
 #
-# /api/ holds the plan-counter beacon (worker/plan-counter), which counts every
+# /api/ holds the visit and plan beacons (worker/plan-counter), which count every
 # request it receives. There is nothing there to index, and a crawler hitting it
 # would inflate the plan count in the daily usage report.
 #
