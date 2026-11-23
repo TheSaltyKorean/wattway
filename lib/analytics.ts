@@ -43,3 +43,32 @@ export function countPlan(): void {
     /* best-effort: never let a counter break planning */
   }
 }
+
+// Same-origin visit counter (worker/plan-counter, path /api/visit). Cloudflare
+// Web Analytics samples 1 page load in 10 on the free plan, so at WattWay's
+// volume its daily visit counts are noise; this is exact. The Worker also
+// classifies the caller's network as human or data center, so crawler traffic
+// from cloud hosts can be excluded from the visit count.
+//
+// Once per browser session (tab), like a GA "session", not once per page view:
+// the sessionStorage flag survives in-site navigation and reloads but not a
+// new tab. If storage is unavailable (private mode, blocked site data) it
+// falls back to counting this page load, which over-counts slightly rather
+// than dropping the visit.
+const VISIT_BEACON_PATH = "/api/visit";
+const VISIT_FLAG = "ww_visit_counted";
+
+export function countVisit(): void {
+  if (typeof navigator === "undefined") return;
+  try {
+    try {
+      if (sessionStorage.getItem(VISIT_FLAG)) return;
+      sessionStorage.setItem(VISIT_FLAG, "1");
+    } catch {
+      /* storage blocked — count this load anyway */
+    }
+    navigator.sendBeacon?.(VISIT_BEACON_PATH);
+  } catch {
+    /* best-effort: never let a counter break the page */
+  }
+}

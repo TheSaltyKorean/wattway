@@ -1,6 +1,6 @@
 # Deploy:  cd worker/plan-counter && npx wrangler deploy
 #
-# Serves wattway.net/api/plan, which GitHub Pages does not serve — the route
+# Serves wattway.net/api/plan and /api/visit, which GitHub Pages does not serve — the route
 # takes precedence at Cloudflare's edge, so it never conflicts with the static
 # site. Free at WattWay's volume: the Workers free tier is 100k requests/day
 # against roughly ten plans a day.
@@ -16,5 +16,6 @@ account_id = "0ba59b722ee12e7de05492f5db5c1c71"
 
 # Bound to the apex only. The site has no other hostname (public/CNAME).
 routes = [
-  { pattern = "wattway.net/api/plan", zone_name = "wattway.net" }
+  { pattern = "wattway.net/api/plan", zone_name = "wattway.net" },
+  { pattern = "wattway.net/api/visit", zone_name = "wattway.net" }
 ]
